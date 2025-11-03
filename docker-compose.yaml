@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   amazon:
     # specify where the Dockerfile you want to build is

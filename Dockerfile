@@ -79,7 +79,7 @@ RUN micromamba install --yes --name base --channel conda-forge && \
 RUN micromamba create -y -n isaac python=3.12
 
 # NOTE: can't run micromamba activate, so we use micromamba run instead
-RUN micromamba run -n isaac python3 -m pip install numpy
+RUN micromamba run -n isaac python3 -m pip install uv
 
 RUN echo "micromamba activate isaac" >> /root/.bashrc
 
