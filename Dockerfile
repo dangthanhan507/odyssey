@@ -35,19 +35,15 @@ RUN apt-get install -y --no-install-recommends \
         python3-dev \
         python3-pip \
         python3-tk \
+        default-jdk \
+        libjchart2d-java \
+        libjide-oss-java \
+        libxmlgraphics-commons-java \
+        liblcm-dev \
+        pkg-config \
     &&\
     rm -rf /var/lib/apt/lists/*
 
-# ENV CONDA_PREFIX=/conda
-# ARG CONDA_PYTHON_VERSION=3.12
-# ENV MAMBA_ROOT_PREFIX=$CONDA_PREFIX/.mamba
-# setup micromamba
-# RUN yes "" | curl -L micro.mamba.pm/install.sh | bash
-# RUN alias micromamba='/root/.local/bin/micromamba' && source ~/.bashrc
-# RUN alias micromamba='/root/.local/bin/micromamba' && /root/.local/bin/micromamba shell init --shell bash --root-prefix=~/.local/share/mamba && source ~/.bashrc  && eval "$(/root/.local/bin/micromamba shell hook --shell bash)" && /root/.local/bin/micromamba activate
-# RUN cd /usr/local && wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba \
-#     && touch /root/.bashrc \
-#     && micromamba shell init --shell bash --root-prefix=~/.local/share/mamba
 
 ARG MAMBA_USER=user
 ARG MAMBA_USER_ID=57439
@@ -83,6 +79,7 @@ RUN micromamba create -y -n isaac python=3.12
 RUN micromamba run -n isaac python3 -m pip install uv
 
 RUN echo "micromamba activate isaac" >> /root/.bashrc
+RUN echo "export CLASSPATH=$CLASSPATH:/usr/share/java/lcm.jar" >> /root/.bashrc
 
 
 SHELL ["/bin/bash", "-c", "-l"]

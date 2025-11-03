@@ -23,5 +23,4 @@ directives:
 
 model_drivers:
   iiwa: !IiwaDriver
-    hand_model_name: wsg
     control_mode: position_and_torque

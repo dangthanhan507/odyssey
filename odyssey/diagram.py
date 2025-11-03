@@ -27,6 +27,7 @@ from manipulation.station import (
 import typing
 import numpy as np
 import lcm
+from drake import lcmt_iiwa_status
 from odyssey.msgs.lcm_msgs import iiwa_commands_t
 '''
     GOAL: Create a Hardware implementation for a user that does not know drake at all to minimally use.
@@ -122,7 +123,7 @@ class RobotLoopDiagram:
     
     # keep these class inner so that it doesn't get used outside
     class KukaTargetsLCM:
-        def __init__(self,):
+        def __init__(self):
             self.lcm = lcm.LCM()
             self.sub = self.lcm.subscribe('ODYSSEY_IIWA_TARGETS', lambda channel, data: self.msg_handler(channel, data))
             self.desired_quat = np.array([0,0,0,1])
@@ -178,7 +179,6 @@ class RobotLoopDiagram:
                     prerequisites_of_calc={self._calc_external.ticket()}
                 )
         def CalcExternalFn(self, context, output):
-            print('test')
             self.target_lcm.handle()
             
             position = self.GetInputPort("iiwa_position").Eval(context)
@@ -186,17 +186,19 @@ class RobotLoopDiagram:
             self._plant.SetPositions(self._plant_context, position)
             ee_pose = self._plant.GetFrameByName(self.ee_frame).CalcPoseInWorld(self._plant_context)
             
-            desired_quat = self.target_lcm.get_desired_quat()
+            desired_quat = self.target_lcm.get_desired_quat() # [x,y,z,w]
             desired_pos = self.target_lcm.get_desired_pos()
             
-            # desired_pose = RigidTransform(
-            #     quaternion=Quaternion(desired_quat[0], desired_quat[1], desired_quat[2], desired_quat[3]),
-            #     p=desired_pos
-            # )
+            desired_pose = RigidTransform(
+                quaternion=Quaternion(desired_quat[3], desired_quat[0], desired_quat[1], desired_quat[2]),
+                p=desired_pos
+            )
+            print(desired_pose)
             
             
             desired_pose = None
             feedforward_torque = None
+            
             if desired_pose is None:
                 desired_pose = ee_pose
             if feedforward_torque is None:
@@ -220,7 +222,7 @@ class RobotLoopDiagram:
         self._station = MakeHardwareStation(scenario, hardware=not use_simulated_hardware)
         
         self._fake_station = MakeFakeStation(scenario)
-        self._plant: MultibodyPlant = self._station.GetSubsystemByName("plant")
+        self._plant: MultibodyPlant = self._fake_station.GetSubsystemByName("plant")
         self._plant_context = self._plant.CreateDefaultContext()
         
     def get_position(self, context: Context):

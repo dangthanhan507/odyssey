@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "drake>=1.46.0",
+    "ipdb>=0.13.13",
     "lcm>=1.5.2",
     "manipulation>=2025.10.20",
 ]
