@@ -19,3 +19,5 @@ lcm-gen -p ./*.lcm
 javac -cp $LCM_JAR lcm_msgs/*.java
 
 jar cf my_types.jar lcm_msgs/*.class
+
+export CLASSPATH=/root/amazon_ws/odyssey/odyssey/msgs/my_types.jar:$CLASSPATH
