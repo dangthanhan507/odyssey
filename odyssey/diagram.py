@@ -149,7 +149,11 @@ class Option2(LeafSystem):
         _, y1 = self._add_sub.Eval(context)
         output.set_value(y1)
 
-class RobotDiagram:
+class RobotLoopDiagram:
+    '''
+        A diagram that tries to abstract the "drake"-specific elements away for the user to easily use.
+        The user should only have to provide a callback function that takes in the iiwa state and outputs desired end-effector pose and feedforward torque. 
+    '''
     
     # keep this class inner so that it doesn't get used outside
     class ExternalSystem(LeafSystem):
@@ -242,7 +246,7 @@ class RobotDiagram:
         builder = DiagramBuilder()
         station = builder.AddNamedSystem("station", self._station)
         
-        external_sys = builder.AddSystem(RobotDiagram.ExternalSystem(
+        external_sys = builder.AddSystem(RobotLoopDiagram.ExternalSystem(
             plant=self._plant,
             ee_frame=diffik_frame,
             use_impedance=self.use_impedance,
