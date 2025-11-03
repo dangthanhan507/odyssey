@@ -13,6 +13,8 @@ if [ $? != 0 ] ; then
 fi
 
 lcm-gen -j ./*.lcm
+lcm-gen -p ./*.lcm
+
 
 javac -cp $LCM_JAR lcm_msgs/*.java
 

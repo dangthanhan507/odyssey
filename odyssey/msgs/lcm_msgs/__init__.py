@@ -5,3 +5,5 @@ lcm-gen 1.5.1
 """
 
 from .iiwa_commands_t import iiwa_commands_t as iiwa_commands_t
+from .lcmt_iiwa_command import lcmt_iiwa_command
+from .lcmt_iiwa_status import lcmt_iiwa_status

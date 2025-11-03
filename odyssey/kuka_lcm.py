@@ -1,5 +1,4 @@
-from drake import lcmt_iiwa_status
-from odyssey.msgs.lcm_msgs import iiwa_commands_t
+from odyssey.msgs.lcm_msgs import iiwa_commands_t, lcmt_iiwa_status
 import lcm
 
 
