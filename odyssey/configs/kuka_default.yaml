@@ -2,7 +2,7 @@ directives:
   # Add iiwa
     - add_model:
         name: iiwa
-        file: package://drake/manipulation/models/iiwa_description/sdf/iiwa14_no_collision.sdf
+        file: package://drake_models/iiwa_description/sdf/iiwa14_no_collision.sdf
         default_joint_positions:
             iiwa_joint_1: [0]
             iiwa_joint_2: [0]
@@ -24,4 +24,4 @@ directives:
 model_drivers:
   iiwa: !IiwaDriver
     hand_model_name: wsg
-    control_mode: position_only
+    control_mode: position_and_torque

@@ -13,7 +13,8 @@ from pydrake.all import (
     Parser,
     ValueProducer,
     BasicVector,
-    AbstractValue
+    AbstractValue,
+    Quaternion
 )
 from manipulation.station import (
     Scenario,
@@ -25,11 +26,12 @@ from manipulation.station import (
 )
 import typing
 import numpy as np
-
-
+import lcm
+from odyssey.msgs.lcm_msgs import iiwa_commands_t
 '''
     GOAL: Create a Hardware implementation for a user that does not know drake at all to minimally use.
 '''
+
 def MakeFakeStation(
     scenario: Scenario,
     *,
@@ -113,74 +115,53 @@ def AddIiwaDifferentialIK(builder, plant, frame=None, xyz_speed_limit = 0.03, ti
     )
     return differential_ik
 
-class Option2(LeafSystem):
-    """Provides two output ports from a single CalcSumDiff function.
-    Option 2 uses caching so that CalcAdd and CalcSub reuse the tuple of values
-    computed by the CalcAddSub helper function.
-    """
-
-    def __init__(self):
-        LeafSystem.__init__(self)
-        self._pair = self.DeclareVectorInputPort("pair", BasicVector(2))
-        self._add_sub = self.DeclareCacheEntry(
-            description="add_sub",
-            value_producer=ValueProducer(
-                allocate=lambda: AbstractValue.Make(tuple()),
-                calc=self.CalcAddSub),
-            prerequisites_of_calc={self._pair.ticket()})
-        self.DeclareVectorOutputPort(
-            "add", BasicVector(1), self.CalcAdd,
-            prerequisites_of_calc={self._add_sub.ticket()})
-        self.DeclareVectorOutputPort(
-            "sub", BasicVector(1), self.CalcSub,
-            prerequisites_of_calc={self._add_sub.ticket()})
-
-    def CalcAddSub(self, context, output):
-        u = self.GetInputPort("pair").Eval(context)
-        add = np.array([u[0] + u[1]])
-        sub = np.array([u[0] - u[1]])
-        output.set_value((add, sub))
-
-    def CalcAdd(self, context, output):
-        y0, _ = self._add_sub.Eval(context)
-        output.set_value(y0)
-
-    def CalcSub(self, context, output):
-        _, y1 = self._add_sub.Eval(context)
-        output.set_value(y1)
-
 class RobotLoopDiagram:
     '''
         A diagram that tries to abstract the "drake"-specific elements away for the user to easily use.
-        The user should only have to provide a callback function that takes in the iiwa state and outputs desired end-effector pose and feedforward torque. 
     '''
     
-    # keep this class inner so that it doesn't get used outside
+    # keep these class inner so that it doesn't get used outside
+    class KukaTargetsLCM:
+        def __init__(self,):
+            self.lcm = lcm.LCM()
+            self.sub = self.lcm.subscribe('ODYSSEY_IIWA_TARGETS', lambda channel, data: self.msg_handler(channel, data))
+            self.desired_quat = np.array([0,0,0,1])
+            self.desired_pos  = np.array([0,0,0])
+        def msg_handler(self, channel, data):
+            fri_msg = iiwa_commands_t.decode(data)
+            
+            self.desired_quat = fri_msg.desired_quat
+            self.desired_pos  = fri_msg.desired_pos
+            
+        def get_desired_quat(self):
+            return self.desired_quat
+        
+        def get_desired_pos(self):
+            return self.desired_pos
+        
+        def handle(self):
+            self.lcm.handle_timeout(10)
+    
     class ExternalSystem(LeafSystem):
-        def __init__(self, plant: MultibodyPlant, ee_frame = "iiwa_link_7", use_impedance: bool = False, callback_fn = lambda **kwargs: (None, None)):
-            LeafSystem.__init__()
+        def __init__(self, plant: MultibodyPlant, ee_frame = "iiwa_link_7", use_impedance: bool = False):
+            LeafSystem.__init__(self)
             
             self._plant = plant
             self._plant_context = plant.CreateDefaultContext()
             self.ee_frame = ee_frame
             
+            self.target_lcm = RobotLoopDiagram.KukaTargetsLCM()
+            
             # Inputs
-            position_input_port = self.DeclareInputPort("iiwa_position", 7)
-            velocity_input_port = self.DeclareInputPort("iiwa_velocity", 7)
-            torque_ext_input_port = self.DeclareInputPort("iiwa_torque_external", 7)
-            torque_com_input_port = self.DeclareInputPort("iiwa_torque_commanded", 7)
+            position_input_port = self.DeclareVectorInputPort("iiwa_position", 7)
             
             
-            self._callback_fn = callback_fn
             self._calc_external = self.DeclareCacheEntry(
                 description="add_sub",
                 value_producer=ValueProducer(
                     allocate=lambda: AbstractValue.Make(tuple()),
-                    calc=self.CalcExternalFn),
-                prerequisites_of_calc={position_input_port.ticket(),
-                                       velocity_input_port.ticket(),
-                                       torque_ext_input_port.ticket(),
-                                       torque_com_input_port.ticket()})
+                    calc=self.CalcExternalFn)
+                )
             
             # Outputs
             self.DeclareAbstractOutputPort(
@@ -197,22 +178,25 @@ class RobotLoopDiagram:
                     prerequisites_of_calc={self._calc_external.ticket()}
                 )
         def CalcExternalFn(self, context, output):
+            print('test')
+            self.target_lcm.handle()
+            
             position = self.GetInputPort("iiwa_position").Eval(context)
-            velocity = self.GetInputPort("iiwa_velocity").Eval(context)
-            torque_external = self.GetInputPort("iiwa_torque_external").Eval(context)
-            torque_commanded = self.GetInputPort("iiwa_torque_commanded").Eval(context)
 
             self._plant.SetPositions(self._plant_context, position)
             ee_pose = self._plant.GetFrameByName(self.ee_frame).CalcPoseInWorld(self._plant_context)
             
-            desired_pose, feedforward_torque = self._callback_fn(
-                iiwa_position=position,
-                iiwa_velocity=velocity,
-                iiwa_torque_external=torque_external,
-                iiwa_torque_commanded=torque_commanded
-            )
+            desired_quat = self.target_lcm.get_desired_quat()
+            desired_pos = self.target_lcm.get_desired_pos()
             
-
+            # desired_pose = RigidTransform(
+            #     quaternion=Quaternion(desired_quat[0], desired_quat[1], desired_quat[2], desired_quat[3]),
+            #     p=desired_pos
+            # )
+            
+            
+            desired_pose = None
+            feedforward_torque = None
             if desired_pose is None:
                 desired_pose = ee_pose
             if feedforward_torque is None:
@@ -232,7 +216,7 @@ class RobotLoopDiagram:
     def __init__(self, config, use_simulated_hardware: bool = False, use_impedance: bool = False):
         
         self.use_impedance = use_impedance
-        scenario = load_scenario(config) # load robot setup yaml
+        scenario = load_scenario(filename=config) # load robot setup yaml
         self._station = MakeHardwareStation(scenario, hardware=not use_simulated_hardware)
         
         self._fake_station = MakeFakeStation(scenario)
@@ -242,15 +226,15 @@ class RobotLoopDiagram:
     def get_position(self, context: Context):
         self._plant.SetPositions(self._plant_context, )
         
-    def setup_diagram(self, diffik_frame="iiwa_link_7", callback_fn = lambda **kwargs: (None, None)):
+    def setup_diagram(self, diffik_frame="iiwa_link_7"):
         builder = DiagramBuilder()
         station = builder.AddNamedSystem("station", self._station)
         
         external_sys = builder.AddSystem(RobotLoopDiagram.ExternalSystem(
             plant=self._plant,
             ee_frame=diffik_frame,
-            use_impedance=self.use_impedance,
-            callback_fn=callback_fn)
+            use_impedance=self.use_impedance
+            )
         )
         
         iiwa_state = builder.AddSystem(Multiplexer([7,7]))
@@ -267,18 +251,18 @@ class RobotLoopDiagram:
             station.GetOutputPort("iiwa.position_measured"),
             external_sys.GetInputPort("iiwa_position")
         )
-        builder.Connect(
-            station.GetOutputPort("iiwa.velocity_estimated"),
-            external_sys.GetInputPort("iiwa_velocity")
-        )
-        builder.Connect(
-            station.GetOutputPort("iiwa.torque_external"),
-            external_sys.GetInputPort("iiwa_torque_external")
-        )
-        builder.Connect(
-            station.GetOutputPort("iiwa.torque_commanded"),
-            external_sys.GetInputPort("iiwa_torque_commanded")
-        )
+        # builder.Connect(
+        #     station.GetOutputPort("iiwa.velocity_estimated"),
+        #     external_sys.GetInputPort("iiwa_velocity")
+        # )
+        # builder.Connect(
+        #     station.GetOutputPort("iiwa.torque_external"),
+        #     external_sys.GetInputPort("iiwa_torque_external")
+        # )
+        # builder.Connect(
+        #     station.GetOutputPort("iiwa.torque_commanded"),
+        #     external_sys.GetInputPort("iiwa_torque_commanded")
+        # )
         
         
         diffik_block = AddIiwaDifferentialIK(builder, self._plant, self._plant.GetFrameByName(diffik_frame))        
@@ -298,7 +282,7 @@ class RobotLoopDiagram:
         if self.use_impedance:
             builder.Connect(
                 external_sys.GetOutputPort("feedforward_torque"),
-                station.GetInputPort("iiwa.feedforward_torque")
+                station.GetInputPort("iiwa.torque")
             )
         
         diagram = builder.Build()
@@ -309,3 +293,10 @@ class RobotLoopDiagram:
         simulator.set_target_realtime_rate(1.0)
         simulator.Initialize()
         simulator.AdvanceTo(duration)
+        
+        
+if __name__ == '__main__':
+    config = "configs/kuka_default.yaml"
+    loop_diagram = RobotLoopDiagram(config, use_simulated_hardware=True, use_impedance=True)
+    diagram = loop_diagram.setup_diagram()
+    loop_diagram.run_system(diagram)

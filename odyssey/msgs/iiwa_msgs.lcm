@@ -1,0 +1,8 @@
+package lcm_msgs;
+
+struct iiwa_commands_t
+{
+    int64_t  timestamp;
+    double   desired_quat[4];
+    double   desired_pos[3];
+}

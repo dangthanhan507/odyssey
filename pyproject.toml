@@ -9,3 +9,11 @@ dependencies = [
     "lcm>=1.5.2",
     "manipulation>=2025.10.20",
 ]
+
+
+[build-system]
+requires = ["setuptools>=61.0"] # Or your chosen build backend (e.g., poetry, hatch)
+build-backend = "setuptools.build_meta" # Or your chosen build backend
+
+[tool.setuptools]
+packages = ["odyssey"]

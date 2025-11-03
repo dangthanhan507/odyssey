@@ -14,3 +14,8 @@ remember to pull docker image for ubuntu 24.04:
 docker pull ubuntu:24.04
 ```
 
+## LCM Messages
+
+```bash
+lcm-gen -p example_t.lcm
+```

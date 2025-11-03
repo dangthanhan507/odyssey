@@ -32,6 +32,7 @@ RUN apt-get install -y --no-install-recommends \
         software-properties-common \
         apt-utils \
         apt-transport-https \
+        python3-dev \
         python3-pip \
         python3-tk \
     &&\
