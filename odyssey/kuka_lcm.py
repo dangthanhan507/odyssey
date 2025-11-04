@@ -5,10 +5,17 @@ import lcm
 # this allows access to kuka iiwa status messages over lcm
 # we can use this outside of drake simulation to prevent overhead in control loop
 class KukaLCM:
-    def __init__(self,):
+    def __init__(self):
         self.lcm = lcm.LCM()
         self.sub = self.lcm.subscribe('IIWA_STATUS', lambda channel, data: self.msg_handler(channel, data))
-    
+
+        self.joint_commanded  = None
+        self.joint_measured   = None
+        self.torque_commanded = None
+        self.torque_measured  = None
+        self.torque_external  = None
+        self.joint_velocity   = None
+        
     def msg_handler(self, channel, data):
         fri_msg = lcmt_iiwa_status.decode(data)
         

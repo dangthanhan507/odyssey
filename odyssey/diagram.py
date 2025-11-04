@@ -13,7 +13,8 @@ from pydrake.all import (
     Parser,
     ValueProducer,
     AbstractValue,
-    Quaternion
+    Quaternion,
+    ConstantValueSource
 )
 from manipulation.station import (
     Scenario,
@@ -245,9 +246,6 @@ class RobotLoopDiagram:
         self._plant: MultibodyPlant = self._fake_station.GetSubsystemByName("plant")
         self._plant_context = self._plant.CreateDefaultContext()
         
-    def get_position(self, context: Context):
-        self._plant.SetPositions(self._plant_context, )
-        
     def setup_diagram(self, diffik_frame="iiwa_link_7"):
         builder = DiagramBuilder()
         station = builder.AddNamedSystem("station", self._station)
@@ -297,9 +295,14 @@ class RobotLoopDiagram:
             iiwa_state.get_output_port(),
             diffik_block.GetInputPort("robot_state"),
         )
+        use_state = builder.AddSystem(ConstantValueSource(Value(True)))
+        builder.Connect(
+            use_state.get_output_port(),
+            diffik_block.GetInputPort("use_robot_state"),
+        )
         
         builder.Connect(
-            external_sys.GetOutputPort("desired_pose"), diffik_block.GetInputPort("X_WE_desired")
+            external_sys.GetOutputPort("desired_pose"), diffik_block.GetInputPort("X_AE_desired")
         )
         
         if self.use_impedance:
@@ -315,6 +318,14 @@ class RobotLoopDiagram:
         simulator = Simulator(diagram)
         simulator.set_target_realtime_rate(1.0)
         simulator.Initialize()
+        if self.simulated:
+            # set joint positions to initial positions
+            initial_q = np.array([0.0, np.pi/6, 0.0, -80*np.pi/180, 0.0, np.pi/6, 0.0])
+            simulator_context = simulator.get_mutable_context()
+            plant = self._station.GetSubsystemByName("plant")
+            plant_context = plant.GetMyMutableContextFromRoot(simulator_context)
+            plant.SetPositions(plant_context, initial_q)
+            
         simulator.AdvanceTo(duration)
         
         
