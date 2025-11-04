@@ -12,6 +12,7 @@ class KukaLCM:
     def __init__(self):
         self.lcm = lcm.LCM()
         self.sub = self.lcm.subscribe('IIWA_STATUS', lambda channel, data: self.msg_handler(channel, data))
+        self.sub.set_queue_capacity(1)
 
         self.joint_commanded  = None
         self.joint_measured   = None
@@ -49,7 +50,7 @@ class KukaLCM:
         return self.torque_external
     
     def handle(self):
-        self.lcm.handle_timeout(10)
+        self.lcm.handle_timeout(1)
 
     def send_joint_command(self, joint_positions, torque):
         msg = iiwa_commands_t()

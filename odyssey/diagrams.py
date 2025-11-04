@@ -5,16 +5,10 @@ from pydrake.all import (
     DiagramBuilder,
     MultibodyPlant,
     Multiplexer,
-    Simulator,
-    DifferentialInverseKinematicsIntegrator,
-    DifferentialInverseKinematicsParameters,
-    AddMultibodyPlant,
-    Parser,
     ValueProducer,
     AbstractValue,
     Quaternion,
     ConstantValueSource,
-    Diagram,
     PassThrough
 )
 import numpy as np

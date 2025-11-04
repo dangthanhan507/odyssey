@@ -6,6 +6,7 @@ class KukaLoopLCM:
     def __init__(self):
         self.lcm = lcm.LCM()
         self.sub = self.lcm.subscribe('ODYSSEY_IIWA_TARGETS', lambda channel, data: self.msg_handler(channel, data))
+        self.sub.set_queue_capacity(1)
         self.desired_quat = None
         self.desired_pos  = None
         self.feedforward_torque = None
