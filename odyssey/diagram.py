@@ -8,7 +8,6 @@ from pydrake.all import (
     Simulator,
     DifferentialInverseKinematicsIntegrator,
     DifferentialInverseKinematicsParameters,
-    Context,
     AddMultibodyPlant,
     Parser,
     ValueProducer,
@@ -118,6 +117,7 @@ def AddIiwaDifferentialIK(builder, plant, frame=None, xyz_speed_limit = 0.03, ti
 class RobotLoopDiagram:
     '''
         A diagram that tries to abstract the "drake"-specific elements away for the user to easily use.
+        Just supply pose commands through LCM and it will handle the rest.
     '''
     
     # keep these class inner so that it doesn't get used outside
@@ -193,6 +193,10 @@ class RobotLoopDiagram:
             velocity = self.GetInputPort("iiwa_velocity").Eval(context)
             torque_external = self.GetInputPort("iiwa_torque_external").Eval(context)
             position_commanded = self.GetInputPort("iiwa_position_commanded").Eval(context)
+            
+            # if simulated, the error may be large on first step but thats ok, otherwise check for large errors
+            if ((self.simulated and self.desired_quat is not None) or not self.simulated) and np.max(np.abs(position_commanded - position)) > 30.0 * np.pi/180: # cannot travel more than 10 deg in one step
+                raise RuntimeError("Large position error between commanded and measured! max joint error: {}".format(np.max(np.abs(position_commanded - position)) * 180/np.pi))
             
             if self.simulated:
                 # publish iiwa_status message for programs to use
@@ -314,18 +318,26 @@ class RobotLoopDiagram:
         diagram = builder.Build()
         return diagram
     
-    def run_system(self, diagram, duration=np.inf):
+    def run_system(self, diagram, duration=np.inf, initial_q = np.array([0.0, np.pi/6, 0.0, -80*np.pi/180, 0.0, np.pi/6, 0.0])):
         simulator = Simulator(diagram)
         simulator.set_target_realtime_rate(1.0)
         simulator.Initialize()
+        
         if self.simulated:
             # set joint positions to initial positions
-            initial_q = np.array([0.0, np.pi/6, 0.0, -80*np.pi/180, 0.0, np.pi/6, 0.0])
             simulator_context = simulator.get_mutable_context()
             plant = self._station.GetSubsystemByName("plant")
             plant_context = plant.GetMyMutableContextFromRoot(simulator_context)
             plant.SetPositions(plant_context, initial_q)
-            
+        
+        else:
+            simulator_context = simulator.get_mutable_context()
+            station_context = self._station.GetMyMtuableContextFromRoot(simulator_context)
+            self._station.ExecuteInitializationEvents(station_context)
+            curr_q = self._station.GetOutputPort("iiwa.position_measured").Eval(station_context)
+            if np.max(np.abs(initial_q - curr_q)) > 1e-3:
+                raise RuntimeError("Initial joint positions for real robot differ from measured positions! measured: {}, initial_q: {}".format(curr_q, initial_q))
+        
         simulator.AdvanceTo(duration)
         
         
