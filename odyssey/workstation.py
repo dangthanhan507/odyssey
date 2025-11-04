@@ -2,7 +2,7 @@ import numpy as np
 import yourdfpy
 import viser
 from viser.extras import ViserUrdf
-from odyssey.msgs.lcm_msgs import lcmt_iiwa_status
+from odyssey.msgs.lcm_msgs import lcmt_iiwa_status, iiwa_commands_t
 import lcm
 
 
@@ -51,6 +51,37 @@ class KukaLCM:
     def handle(self):
         self.lcm.handle_timeout(10)
 
+    def send_joint_command(self, joint_positions, torque):
+        msg = iiwa_commands_t()
+        msg.desired_joints = joint_positions
+        msg.desired_torque = torque
+        
+        msg.desired_cartesian_vel = np.zeros(6).tolist()
+        msg.desired_quat = [0, 0, 0, 1]
+        msg.desired_pos = [0, 0, 0]
+        
+        self.lcm.publish('ODYSSEY_IIWA_TARGETS', msg.encode())
+    
+    def send_pose_command(self, quat, pos, torque):
+        msg = iiwa_commands_t()
+        msg.desired_quat = quat.tolist()
+        msg.desired_pos = pos.tolist()
+        msg.desired_torque = torque
+        
+        msg.desired_joints = np.zeros(7).tolist()
+        msg.desired_cartesian_vel = np.zeros(6).tolist()
+        self.lcm.publish('ODYSSEY_IIWA_TARGETS', msg.encode())
+    
+    def send_cartesian_velocity_command(self, V_WE, torque):
+        msg = iiwa_commands_t()
+        msg.desired_cartesian_vel = V_WE.tolist()
+        msg.desired_torque = torque
+        
+        msg.desired_joints = np.zeros(7).tolist()
+        msg.desired_quat = [0, 0, 0, 1]
+        msg.desired_pos = [0, 0, 0]
+        self.lcm.publish('ODYSSEY_IIWA_TARGETS', msg.encode())
+    
 '''
     Base workstation gives standard functionality to visualize a robot in viser server.
 '''
@@ -108,6 +139,14 @@ class OdysseyBaseWorkstation:
         if joint_position is not None:
             self.update_robot_joints(joint_position)
 
+    def send_joint_command(self, joint_positions, torque = np.zeros(7)):
+        self.kuka_lcm.send_joint_command(joint_positions, torque)
+    
+    def send_pose_command(self, quat, pos, torque = np.zeros(7)):
+        self.kuka_lcm.send_pose_command(quat, pos, torque)
+    
+    def send_cartesian_velocity_command(self, V_WE, torque = np.zeros(7)):
+        self.kuka_lcm.send_cartesian_velocity_command(V_WE, torque)
 
 if __name__ == "__main__":
     workstation = OdysseyBaseWorkstation(

@@ -19,7 +19,7 @@ from pydrake.all import (
 )
 import numpy as np
 from odyssey.msgs.lcm_msgs import lcmt_iiwa_status
-from robot_lcm import KukaLoopLCM
+from odyssey.robot_lcm import KukaLoopLCM
 from enum import Enum
 from odyssey.utils import AddIiwaDifferentialIK, VelocityDiffIK
 
@@ -66,7 +66,7 @@ class ExternalSystem(LeafSystem):
             description="calculate out for robot",
             value_producer=ValueProducer(
                 allocate=lambda: AbstractValue.Make(tuple()),
-                calc=self.CalcExternalFn)
+                calc=self.CalcExternalFn),
             )
         
         # Outputs
@@ -127,7 +127,6 @@ class ExternalSystem(LeafSystem):
             self.lcm.lcm.publish('IIWA_STATUS', lcmt_iiwa_status.encode(msg))
 
         if self.control_mode == ControlMode.JOINT:
-
             q_desired = self.lcm.get_desired_joints()
             if not q_desired is None:
                 q_desired = np.array(q_desired)
@@ -139,12 +138,13 @@ class ExternalSystem(LeafSystem):
                 delta_t = max(curr_time - prev_time, 1e-3)
                 qdot_approx = (q_desired - position) / delta_t
                 qdot_approx = np.clip(qdot_approx, -self.max_joint_speed, self.max_joint_speed)
-                q_desired = position + qdot_approx * delta_t
+                # q_desired = position + qdot_approx * delta_t
                 
                 self.prev_time = context.get_time()
                 
             else:
-                q_desired = position_commanded if not np.max(np.abs(position_commanded - position)) > 30.0 * np.pi/180 else position
+                q_desired = position if np.max(np.abs(position_commanded - position)) > 30.0 * np.pi/180 or self.simulated else position_commanded
+            
             desired_out = q_desired
             
         elif self.control_mode == ControlMode.DIFFIK_POSE:
@@ -219,15 +219,16 @@ def joint_control_diagram(plant: MultibodyPlant, simulated: bool = False, max_jo
     )
     
     builder.ExportOutput(
-        external_sys_block.get_output_port(), 
+        external_sys_block.GetOutputPort('desired_joints'), 
         "iiwa.position"
     )
     builder.ExportOutput(
-        external_sys_block.get_output_port("feedforward_torque"),
+        external_sys_block.GetOutputPort("feedforward_torque"),
         "feedforward_torque"
     )
     
     diagram = builder.Build()
+    diagram.set_name("JointControlDiagram")
     return diagram
 
 
@@ -293,22 +294,23 @@ def diffik_pose_diagram(plant: MultibodyPlant, simulated: bool = False, ee_frame
         diffik_block.GetInputPort("use_robot_state"),
     )
     
-    builder.Connect(
-        external_sys_block.get_output_port("desired_pose"),
-        diffik_block.GetInputPort("X_AE_desired")
-    )
-    
     builder.ExportOutput(
         diffik_block.get_output_port(), 
         "iiwa.position"
     )
     
+    builder.Connect(
+        external_sys_block.GetOutputPort("desired_pose"),
+        diffik_block.GetInputPort("X_AE_desired")
+    )
+    
     builder.ExportOutput(
-        external_sys_block.get_output_port("feedforward_torque"),
+        external_sys_block.GetOutputPort("feedforward_torque"),
         "feedforward_torque"
     )
 
     diagram = builder.Build()
+    diagram.set_name("DiffIKPoseControlDiagram")
     return diagram
 
 
@@ -363,19 +365,23 @@ def cartesian_velocity_diagram(plant: MultibodyPlant, ee_frame='iiwa_link_7', si
         iiwa_pos_passblock.get_output_port(),
         vel_diffik_block.GetInputPort("iiwa_position")
     )
-    builder.Connect(
-        external_sys_block.get_output_port("desired_velocity"),
-        vel_diffik_block.GetInputPort("V_WE")
-    )
-    
+
     builder.ExportOutput(
         vel_diffik_block.get_output_port(), 
         "iiwa.position"
     )
+    
+    builder.Connect(
+        external_sys_block.GetOutputPort("desired_velocity"),
+        vel_diffik_block.GetInputPort("V_WE")
+    )
+    
+
     builder.ExportOutput(
-        external_sys_block.get_output_port("feedforward_torque"),
+        external_sys_block.GetOutputPort("feedforward_torque"),
         "feedforward_torque"
     )
     
     diagram = builder.Build()
+    diagram.set_name("CartesianVelocityControlDiagram")
     return diagram

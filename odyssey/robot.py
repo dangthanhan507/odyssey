@@ -1,19 +1,10 @@
 from pydrake.all import (
-    LeafSystem,
-    RigidTransform,
-    Value,
     DiagramBuilder,
     MultibodyPlant,
-    Multiplexer,
     Simulator,
-    DifferentialInverseKinematicsIntegrator,
-    DifferentialInverseKinematicsParameters,
     AddMultibodyPlant,
     Parser,
-    ValueProducer,
-    AbstractValue,
-    Quaternion,
-    ConstantValueSource
+    LeafSystem
 )
 from manipulation.station import (
     Scenario,
@@ -25,7 +16,7 @@ from manipulation.station import (
 )
 import typing
 import numpy as np
-from diagrams import ControlMode, joint_control_diagram, diffik_pose_diagram, cartesian_velocity_diagram
+from odyssey.diagrams import ControlMode, joint_control_diagram, diffik_pose_diagram, cartesian_velocity_diagram
 
 def MakeFakeStation(
     scenario: Scenario,
@@ -75,29 +66,32 @@ class RobotLoopDiagram:
         station = builder.AddNamedSystem("station", self._station)
         
         if self.control_mode == ControlMode.JOINT:
-            control_diagram = joint_control_diagram(
-                builder,
-                station,
-                use_impedance=self.use_impedance
+            control_diagram = builder.AddSystem(
+                joint_control_diagram(
+                    self._plant,
+                    simulated=self.simulated,
+                )
             )
+        
         elif self.control_mode == ControlMode.DIFFIK_POSE:
-            control_diagram = diffik_pose_diagram(
-                builder,
-                station,
-                self._plant,
-                self._plant_context,
-                diffik_frame,
-                use_impedance=self.use_impedance
+            control_diagram = builder.AddSystem(
+                diffik_pose_diagram(
+                    self._plant,
+                    simulated=self.simulated,
+                    ee_frame=diffik_frame,
+                )
             )
+        
         elif self.control_mode == ControlMode.CARTESIAN_VELOCITY:
-            control_diagram = cartesian_velocity_diagram(
-                builder,
-                station,
-                self._plant,
-                self._plant_context,
-                diffik_frame,
-                use_impedance=self.use_impedance
+            control_diagram = builder.AddSystem(
+                cartesian_velocity_diagram(
+                    self._plant,
+                    ee_frame=diffik_frame,
+                    simulated=self.simulated,
+                    vel_limit=0.03
+                )
             )
+        
         else:
             raise ValueError("Unsupported control mode: {}".format(self.control_mode))
 
@@ -111,18 +105,55 @@ class RobotLoopDiagram:
             control_diagram.GetInputPort("iiwa.velocity_estimated")
         )
         builder.Connect(
-            station.GetOutputPort("iiwa.torque_measured"),
-            control_diagram.GetInputPort("iiwa.torque_measured")
-        )
-        builder.Connect(
             station.GetOutputPort("iiwa.torque_external"),
             control_diagram.GetInputPort("iiwa.torque_external")
         )
+        
+        if not self.simulated:
+            # NOTE: this causes algebraic loop in simulation since iiwa.position is passed back as iiwa.position_commanded
+            builder.Connect(
+                station.GetOutputPort("iiwa.position_commanded"),
+                control_diagram.GetInputPort("iiwa.position_commanded")
+            )
+        else:
+            class HackCommand(LeafSystem):
+                def __init__(self, time_step=1e-4):
+                    LeafSystem.__init__(self)
+                    
+                    self.DeclareVectorInputPort("iiwa.position_measured", 7)
+                    self.DeclareVectorInputPort("iiwa.position_commanded", 7)
+                    
+                    discrete_state_index = self.DeclareDiscreteState(7) # dummy state for position commanded
+                    self.DeclareInitializationDiscreteUpdateEvent(self.Initialize)
+                    self.DeclarePeriodicDiscreteUpdateEvent(time_step, 0, self.UpdateCommanded)
+                    
+                    self.DeclareVectorOutputPort("iiwa.position_commanded_hack", 7, self.OutputCommanded, prerequisites_of_calc={self.discrete_state_ticket(discrete_state_index)})
+                def Initialize(self, context, discrete_state):
+                    discrete_state.set_value(0,self.get_input_port(0).Eval(context),)
+                def UpdateCommanded(self, context, discrete_state):
+                    commanded = self.GetInputPort("iiwa.position_commanded").Eval(context)
+                def OutputCommanded(self, context, output):
+                    commanded = context.get_discrete_state(0).get_value()
+                    output.SetFromVector(commanded)
+                    
+            hack_command = builder.AddSystem(HackCommand(self._plant.time_step()))
+            builder.Connect(
+                station.GetOutputPort("iiwa.position_measured"),
+                hack_command.GetInputPort("iiwa.position_measured")
+            )
+            builder.Connect(
+                station.GetOutputPort("iiwa.position_commanded"),
+                hack_command.GetInputPort("iiwa.position_commanded")
+            )
+            builder.Connect(
+                hack_command.GetOutputPort("iiwa.position_commanded_hack"),
+                control_diagram.GetInputPort("iiwa.position_commanded")
+            )
     
         # outputs
         builder.Connect(
             control_diagram.GetOutputPort("iiwa.position"),
-            station.GetInputPort("iiwa.positions")
+            station.GetInputPort("iiwa.position")
         )
         builder.Connect(
             control_diagram.GetOutputPort("feedforward_torque"),
