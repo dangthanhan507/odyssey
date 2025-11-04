@@ -21,7 +21,7 @@ import numpy as np
 from odyssey.msgs.lcm_msgs import lcmt_iiwa_status
 from robot_lcm import KukaLoopLCM
 from enum import Enum
-from odyssey.utils import AddIiwaDifferentialIK
+from odyssey.utils import AddIiwaDifferentialIK, VelocityDiffIK
 
 '''
     The robot is running joint position / joint impedance.
@@ -38,7 +38,8 @@ class ExternalSystem(LeafSystem):
                  ee_frame = "iiwa_link_7",
                  simulated: bool = False,
                  control_mode: ControlMode = ControlMode.JOINT,
-                 max_joint_speed = 30.0 * np.pi / 180.0):
+                 max_joint_speed = 30.0 * np.pi / 180.0,
+                 ):
         LeafSystem.__init__(self)
         
         self.simulated = simulated
@@ -311,8 +312,70 @@ def diffik_pose_diagram(plant: MultibodyPlant, simulated: bool = False, ee_frame
     return diagram
 
 
-def cartesian_velocity_diagram():
+def cartesian_velocity_diagram(plant: MultibodyPlant, ee_frame='iiwa_link_7', simulated: bool = False, vel_limit=0.03):
     builder = DiagramBuilder()
+    
+    iiwa_pos_passblock = builder.AddSystem(PassThrough(7))
+    iiwa_vel_passblock = builder.AddSystem(PassThrough(7))
+    
+    iiwa_pos_cmd_passblock = builder.AddSystem(PassThrough(7))
+    iiwa_torque_ext_passblock = builder.AddSystem(PassThrough(7))
+    
+    builder.ExportInput(iiwa_pos_passblock.get_input_port(), "iiwa.position_measured")
+    builder.ExportInput(iiwa_vel_passblock.get_input_port(), "iiwa.velocity_estimated")
+    builder.ExportInput(iiwa_pos_cmd_passblock.get_input_port(), "iiwa.position_commanded")
+    builder.ExportInput(iiwa_torque_ext_passblock.get_input_port(), "iiwa.torque_external")
+    
+    external_sys_block = builder.AddSystem(
+        ExternalSystem(
+            plant,
+            ee_frame=ee_frame,
+            simulated=simulated,
+            control_mode=ControlMode.CARTESIAN_VELOCITY
+        )
+    )
+    
+    builder.Connect(
+        iiwa_pos_passblock.get_output_port(),
+        external_sys_block.GetInputPort("iiwa_position")
+    )
+    builder.Connect(
+        iiwa_vel_passblock.get_output_port(),
+        external_sys_block.GetInputPort("iiwa_velocity")
+    )
+    builder.Connect(
+        iiwa_torque_ext_passblock.get_output_port(),
+        external_sys_block.GetInputPort("iiwa_torque_external")
+    )
+    builder.Connect(
+        iiwa_pos_cmd_passblock.get_output_port(),
+        external_sys_block.GetInputPort("iiwa_position_commanded")
+    )
+    
+    vel_diffik_block = builder.AddSystem(
+        VelocityDiffIK(
+            plant,
+            frame_name=ee_frame,
+            vel_limit=vel_limit
+        )
+    )
+    builder.Connect(
+        iiwa_pos_passblock.get_output_port(),
+        vel_diffik_block.GetInputPort("iiwa_position")
+    )
+    builder.Connect(
+        external_sys_block.get_output_port("desired_velocity"),
+        vel_diffik_block.GetInputPort("V_WE")
+    )
+    
+    builder.ExportOutput(
+        vel_diffik_block.get_output_port(), 
+        "iiwa.position"
+    )
+    builder.ExportOutput(
+        external_sys_block.get_output_port("feedforward_torque"),
+        "feedforward_torque"
+    )
     
     diagram = builder.Build()
     return diagram
