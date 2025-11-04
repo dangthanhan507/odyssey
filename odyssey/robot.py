@@ -133,13 +133,16 @@ class RobotLoopDiagram:
             
             self.desired_quat = fri_msg.desired_quat
             self.desired_pos  = fri_msg.desired_pos
-            self.feedforward_torque = fri_msg.feedforward_torque
+            self.feedforward_torque = fri_msg.desired_torque
             
         def get_desired_quat(self):
             return self.desired_quat
         
         def get_desired_pos(self):
             return self.desired_pos
+
+        def get_feedforward_torque(self):
+            return self.feedforward_torque
         
         def handle(self):
             self.lcm.handle_timeout(10)
@@ -217,13 +220,12 @@ class RobotLoopDiagram:
             
             self.desired_quat = self.lcm.get_desired_quat() # [x,y,z,w]
             self.desired_pos = self.lcm.get_desired_pos()
-            
+            self.feedforward_torque = self.lcm.get_feedforward_torque()
             
             self.desired_pose = RigidTransform(
                 quaternion=Quaternion(self.desired_quat[3], self.desired_quat[0], self.desired_quat[1], self.desired_quat[2]),
                 p=self.desired_pos
             ) if not (self.desired_quat is None or self.desired_pos is None) else None
-            self.feedforward_torque = None
             
             desired_pose = self.desired_pose if not self.desired_pose is None else ee_pose
             feedforward_torque = self.feedforward_torque if not self.feedforward_torque is None else np.zeros(7)
@@ -339,7 +341,6 @@ class RobotLoopDiagram:
                 raise RuntimeError("Initial joint positions for real robot differ from measured positions! measured: {}, initial_q: {}".format(curr_q, initial_q))
         
         simulator.AdvanceTo(duration)
-        
         
 if __name__ == '__main__':
     config = "configs/kuka_default.yaml"

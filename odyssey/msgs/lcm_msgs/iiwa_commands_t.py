@@ -10,16 +10,19 @@ except ImportError:
 import struct
 
 class iiwa_commands_t(object):
-    __slots__ = ["timestamp", "desired_quat", "desired_pos"]
+    __slots__ = ["timestamp", "desired_quat", "desired_pos", "desired_cartesian_vel", "desired_joints", "desired_torque"]
 
-    __typenames__ = ["int64_t", "double", "double"]
+    __typenames__ = ["int64_t", "double", "double", "double", "double", "double"]
 
-    __dimensions__ = [None, [4], [3]]
+    __dimensions__ = [None, [4], [3], [6], [7], [7]]
 
     def __init__(self):
         self.timestamp = 0
         self.desired_quat = [ 0.0 for dim0 in range(4) ]
         self.desired_pos = [ 0.0 for dim0 in range(3) ]
+        self.desired_cartesian_vel = [ 0.0 for dim0 in range(6) ]
+        self.desired_joints = [ 0.0 for dim0 in range(7) ]
+        self.desired_torque = [ 0.0 for dim0 in range(7) ]
 
     def encode(self):
         buf = BytesIO()
@@ -31,6 +34,9 @@ class iiwa_commands_t(object):
         buf.write(struct.pack(">q", self.timestamp))
         buf.write(struct.pack('>4d', *self.desired_quat[:4]))
         buf.write(struct.pack('>3d', *self.desired_pos[:3]))
+        buf.write(struct.pack('>6d', *self.desired_cartesian_vel[:6]))
+        buf.write(struct.pack('>7d', *self.desired_joints[:7]))
+        buf.write(struct.pack('>7d', *self.desired_torque[:7]))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -47,12 +53,15 @@ class iiwa_commands_t(object):
         self.timestamp = struct.unpack(">q", buf.read(8))[0]
         self.desired_quat = struct.unpack('>4d', buf.read(32))
         self.desired_pos = struct.unpack('>3d', buf.read(24))
+        self.desired_cartesian_vel = struct.unpack('>6d', buf.read(48))
+        self.desired_joints = struct.unpack('>7d', buf.read(56))
+        self.desired_torque = struct.unpack('>7d', buf.read(56))
         return self
     _decode_one = staticmethod(_decode_one)
 
     def _get_hash_recursive(parents):
         if iiwa_commands_t in parents: return 0
-        tmphash = (0x49a8924bc8293b23) & 0xffffffffffffffff
+        tmphash = (0xd0fb79005afbb58b) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff) + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

@@ -5,4 +5,7 @@ struct iiwa_commands_t
     int64_t  timestamp;
     double   desired_quat[4];
     double   desired_pos[3];
+    double   desired_cartesian_vel[6];
+    double   desired_joints[7];
+    double   desired_torque[7];
 }
