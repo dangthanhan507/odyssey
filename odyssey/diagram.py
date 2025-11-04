@@ -12,7 +12,6 @@ from pydrake.all import (
     AddMultibodyPlant,
     Parser,
     ValueProducer,
-    BasicVector,
     AbstractValue,
     Quaternion
 )
@@ -125,13 +124,15 @@ class RobotLoopDiagram:
         def __init__(self):
             self.lcm = lcm.LCM()
             self.sub = self.lcm.subscribe('ODYSSEY_IIWA_TARGETS', lambda channel, data: self.msg_handler(channel, data))
-            self.desired_quat = np.array([0,0,0,1])
-            self.desired_pos  = np.array([0,0,0])
+            self.desired_quat = None
+            self.desired_pos  = None
+            self.feedforward_torque = None
         def msg_handler(self, channel, data):
             fri_msg = iiwa_commands_t.decode(data)
             
             self.desired_quat = fri_msg.desired_quat
             self.desired_pos  = fri_msg.desired_pos
+            self.feedforward_torque = fri_msg.feedforward_torque
             
         def get_desired_quat(self):
             return self.desired_quat
@@ -151,14 +152,17 @@ class RobotLoopDiagram:
             self._plant_context = plant.CreateDefaultContext()
             self.ee_frame = ee_frame
             
+            self.desired_quat = None
+            self.desired_pos = None
+            self.feedforward_torque = None
+            
             self.lcm = RobotLoopDiagram.KukaLoopLCM()
             
             # Inputs
-            position_input_port = self.DeclareVectorInputPort("iiwa_position", 7)
-            velocity_input_port = self.DeclareVectorInputPort("iiwa_velocity", 7)
-            torque_external_input_port = self.DeclareVectorInputPort("iiwa_torque_external", 7)
-            # torque_commanded_input_port = self.DeclareVectorInputPort("iiwa_torque_commanded", 7)
-            position_commanded_input_port = self.DeclareVectorInputPort("iiwa_position_commanded", 7)
+            self.DeclareVectorInputPort("iiwa_position", 7)
+            self.DeclareVectorInputPort("iiwa_velocity", 7)
+            self.DeclareVectorInputPort("iiwa_torque_external", 7)
+            self.DeclareVectorInputPort("iiwa_position_commanded", 7)
             
             self._calc_external = self.DeclareCacheEntry(
                 description="add_sub",
@@ -206,21 +210,18 @@ class RobotLoopDiagram:
             self._plant.SetPositions(self._plant_context, position)
             ee_pose = self._plant.GetFrameByName(self.ee_frame).CalcPoseInWorld(self._plant_context)
             
-            desired_quat = self.lcm.get_desired_quat() # [x,y,z,w]
-            desired_pos = self.lcm.get_desired_pos()
+            self.desired_quat = self.lcm.get_desired_quat() # [x,y,z,w]
+            self.desired_pos = self.lcm.get_desired_pos()
             
-            desired_pose = RigidTransform(
-                quaternion=Quaternion(desired_quat[3], desired_quat[0], desired_quat[1], desired_quat[2]),
-                p=desired_pos
-            )
-            print(desired_pose)
             
-            desired_pose = None
-            feedforward_torque = None
-            if desired_pose is None:
-                desired_pose = ee_pose
-            if feedforward_torque is None:
-                feedforward_torque = np.zeros(7)
+            self.desired_pose = RigidTransform(
+                quaternion=Quaternion(self.desired_quat[3], self.desired_quat[0], self.desired_quat[1], self.desired_quat[2]),
+                p=self.desired_pos
+            ) if not (self.desired_quat is None or self.desired_pos is None) else None
+            self.feedforward_torque = None
+            
+            desired_pose = self.desired_pose if not self.desired_pose is None else ee_pose
+            feedforward_torque = self.feedforward_torque if not self.feedforward_torque is None else np.zeros(7)
             
             output.set_value((desired_pose, feedforward_torque))
         

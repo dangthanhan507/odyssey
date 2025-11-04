@@ -6,6 +6,8 @@ Odyssey (noun) - a long wandering or voyage usually marked by many changes of fo
 
 This library should be my one-stop shop for running code on the kuka hardware. 
 
+## Running code
+
 ## Docker
 
 remember to pull docker image for ubuntu 24.04:

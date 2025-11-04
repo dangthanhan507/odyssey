@@ -9,6 +9,9 @@ dependencies = [
     "ipdb>=0.13.13",
     "lcm>=1.5.2",
     "manipulation>=2025.10.20",
+    "robot-descriptions>=1.21.0",
+    "viser>=1.0.15",
+    "yourdfpy>=0.0.58",
 ]
 
 
