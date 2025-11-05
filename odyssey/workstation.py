@@ -49,8 +49,8 @@ class KukaLCM:
     def get_joint_torque_external(self):
         return self.torque_external
     
-    def handle(self):
-        self.lcm.handle_timeout(1)
+    def handle(self, ms=1):
+        self.lcm.handle_timeout(ms)
 
     def send_joint_command(self, joint_positions, torque):
         msg = iiwa_commands_t()
@@ -135,7 +135,7 @@ class OdysseyBaseWorkstation:
         self.viser_urdf.update_cfg(np.array(joint_positions))
 
     def handle(self):
-        self.kuka_lcm.handle()
+        self.kuka_lcm.handle(ms=10)
         joint_position = self.kuka_lcm.get_joint_position_measured()
         if joint_position is not None:
             self.update_robot_joints(joint_position)

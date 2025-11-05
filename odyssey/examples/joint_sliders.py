@@ -1,5 +1,4 @@
 import multiprocessing as mp
-import viser
 import numpy as np
 from odyssey.robot import RobotLoopDiagram, ControlMode
 from odyssey.workstation import OdysseyBaseWorkstation

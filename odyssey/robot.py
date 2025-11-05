@@ -4,7 +4,8 @@ from pydrake.all import (
     Simulator,
     AddMultibodyPlant,
     Parser,
-    LeafSystem
+    LeafSystem,
+    PassThrough
 )
 from manipulation.station import (
     Scenario,
@@ -128,12 +129,16 @@ class RobotLoopDiagram:
                     self.DeclarePeriodicDiscreteUpdateEvent(time_step, 0, self.UpdateCommanded)
                     
                     self.DeclareVectorOutputPort("iiwa.position_commanded_hack", 7, self.OutputCommanded, prerequisites_of_calc={self.discrete_state_ticket(discrete_state_index)})
+                
                 def Initialize(self, context, discrete_state):
-                    discrete_state.set_value(0,self.get_input_port(0).Eval(context),)
+                    discrete_state.set_value(0,self.GetInputPort("iiwa.position_measured").Eval(context))
+                
                 def UpdateCommanded(self, context, discrete_state):
-                    commanded = self.GetInputPort("iiwa.position_commanded").Eval(context)
+                    discrete_state.set_value(0, self.GetInputPort("iiwa.position_commanded").Eval(context))
+                
                 def OutputCommanded(self, context, output):
                     commanded = context.get_discrete_state(0).get_value()
+                    print("Hack commanded positions: {}".format(commanded))
                     output.SetFromVector(commanded)
                     
             hack_command = builder.AddSystem(HackCommand(self._plant.time_step()))
@@ -149,7 +154,35 @@ class RobotLoopDiagram:
                 hack_command.GetOutputPort("iiwa.position_commanded_hack"),
                 control_diagram.GetInputPort("iiwa.position_commanded")
             )
-    
+
+        class PrintDebug(LeafSystem):
+            def __init__(self, plant, frame_E = 'iiwa_link_7'):
+                LeafSystem.__init__(self)
+                self._plant = plant
+                self._plant_context = plant.CreateDefaultContext()
+                self.frame_E = frame_E
+                
+                self.DeclareVectorInputPort("iiwa.position_commanded", 7)
+                self.DeclarePeriodicPublishEvent(0.01, 0, self.DoPublish)
+            def DoPublish(self, context):
+                pos_cmd = self.GetInputPort("iiwa.position_commanded").Eval(context)
+                self._plant.SetPositions(self._plant_context, pos_cmd)
+                frame = self._plant.GetFrameByName(self.frame_E)
+                X_WE = frame.CalcPoseInWorld(self._plant_context)
+                print("Commanded positions: {}".format(pos_cmd))
+                print("End-effector position: {}".format(X_WE.translation()))
+        debug = builder.AddSystem(PrintDebug(self._plant, frame_E=diffik_frame))
+        passthrough_block = builder.AddSystem(PassThrough(7))
+        builder.Connect(
+            station.GetOutputPort("iiwa.position_commanded"),
+            passthrough_block.get_input_port()
+        )
+        builder.Connect(
+            # control_diagram.GetOutputPort("iiwa.position"),
+            passthrough_block.get_output_port(),
+            debug.GetInputPort("iiwa.position_commanded")
+        )
+        
         # outputs
         builder.Connect(
             control_diagram.GetOutputPort("iiwa.position"),
@@ -184,6 +217,15 @@ class RobotLoopDiagram:
                 raise RuntimeError("Initial joint positions for real robot differ from measured positions! measured: {}, initial_q: {}".format(curr_q, initial_q))
         
         simulator.AdvanceTo(duration)
+        
+    def get_arm_pose(self, frame_name, joint_positions):
+        plant_context = self._plant.CreateDefaultContext()
+        self._plant.SetPositions(plant_context, joint_positions)
+        frame = self._plant.GetFrameByName(frame_name)
+        X_WF = frame.CalcPoseInWorld(plant_context)
+        pos = X_WF.translation()
+        quat = X_WF.rotation().ToQuaternion().wxyz()
+        return quat, pos
         
 if __name__ == '__main__':
     config = "configs/kuka_default.yaml"
