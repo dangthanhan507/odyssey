@@ -31,3 +31,15 @@ jar cf my_types.jar lcm_msgs/*.class
 ```
 
 **NOTE**: this is assuming we are using Docker which installed lcm-dev into `/usr/share/java/lcm.jar`.
+
+
+## Pyspacemouse 
+
+Pyspacemouse instructions
+
+```bash
+sudo apt-get install libhidapi-dev
+sudo echo 'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0664", GROUP="plugdev"' > /etc/udev/rules.d/99-hidraw-permissions.rules
+sudo usermod -aG plugdev $USER
+newgrp plugdev
+```

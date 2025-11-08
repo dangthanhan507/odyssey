@@ -41,6 +41,7 @@ RUN apt-get install -y --no-install-recommends \
         libxmlgraphics-commons-java \
         liblcm-dev \
         pkg-config \
+        libhidapi-dev \
     &&\
     rm -rf /var/lib/apt/lists/*
 
