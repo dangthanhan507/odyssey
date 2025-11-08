@@ -24,7 +24,7 @@ class CartesianDragWorkstation(OdysseyBaseWorkstation):
         
         transform_control.on_update(
             lambda _: self.send_pose_command(
-                quat=transform_control.wxyz[[3,0,1,2]],
+                quat=transform_control.wxyz,
                 pos=transform_control.position
             )
         )
@@ -59,6 +59,3 @@ if __name__ == '__main__':
     # kill robot process
     robot_process.terminate()
     robot_process.join()
-
-if __name__ == '__main__':
-    pass

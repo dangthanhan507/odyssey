@@ -56,6 +56,9 @@ class RobotLoopDiagram:
         self.simulated = use_simulated_hardware
         self.use_impedance = use_impedance
         scenario = load_scenario(filename=config) # load robot setup yaml
+        
+        # from pydrake.all import StartMeshcat
+        # meshcat = StartMeshcat()
         self._station = MakeHardwareStation(scenario, hardware=not use_simulated_hardware)
         
         self._fake_station = MakeFakeStation(scenario)
@@ -138,7 +141,8 @@ class RobotLoopDiagram:
                 
                 def OutputCommanded(self, context, output):
                     commanded = context.get_discrete_state(0).get_value()
-                    print("Hack commanded positions: {}".format(commanded))
+                    np.set_printoptions(precision=4, suppress=True)
+                    # print("HackCommand - output commanded: {}".format(commanded))
                     output.SetFromVector(commanded)
                     
             hack_command = builder.AddSystem(HackCommand(self._plant.time_step()))
@@ -169,8 +173,8 @@ class RobotLoopDiagram:
                 self._plant.SetPositions(self._plant_context, pos_cmd)
                 frame = self._plant.GetFrameByName(self.frame_E)
                 X_WE = frame.CalcPoseInWorld(self._plant_context)
-                print("Commanded positions: {}".format(pos_cmd))
-                print("End-effector position: {}".format(X_WE.translation()))
+                # print("Debug - End Effector Position Commanded: pos {}, quat {}".format(X_WE.translation(), X_WE.rotation().ToQuaternion().wxyz()))
+        
         debug = builder.AddSystem(PrintDebug(self._plant, frame_E=diffik_frame))
         passthrough_block = builder.AddSystem(PassThrough(7))
         builder.Connect(

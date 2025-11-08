@@ -47,6 +47,7 @@ class ExternalSystem(LeafSystem):
         self.desired_quat = None
         self.desired_pos = None
         self.feedforward_torque = None
+        self.first_ee_pose = None
         
         self.lcm = KukaLoopLCM()
         
@@ -142,21 +143,32 @@ class ExternalSystem(LeafSystem):
             desired_out = q_desired
             
         elif self.control_mode == ControlMode.DIFFIK_POSE:
+            
             self._plant.SetPositions(self._plant_context, position)
             ee_pose = self._plant.GetFrameByName(self.ee_frame).CalcPoseInWorld(self._plant_context)
             
-            self.desired_quat = self.lcm.get_desired_quat() # [x,y,z,w]
+            if self.first_ee_pose is None:
+                self.first_ee_pose = ee_pose
+            
+            self.desired_quat = self.lcm.get_desired_quat() # [w,x,y,z]
             self.desired_pos = self.lcm.get_desired_pos()
             self.feedforward_torque = self.lcm.get_feedforward_torque()
             
+            # normalize self.desired_quat
+            # if not self.desired_quat is None:
+            #     norm = np.linalg.norm(self.desired_quat)
+            #     if norm > 1e-6:
+            #         self.desired_quat = (np.array(self.desired_quat) / norm).tolist()
+            
             self.desired_pose = RigidTransform(
-                quaternion=Quaternion(self.desired_quat[3], self.desired_quat[0], self.desired_quat[1], self.desired_quat[2]),
+                quaternion=Quaternion(self.desired_quat[0], self.desired_quat[1], self.desired_quat[2], self.desired_quat[3]),
                 p=self.desired_pos
             ) if not (self.desired_quat is None or self.desired_pos is None) else None
             
-            desired_pose = self.desired_pose if not self.desired_pose is None else ee_pose
+            desired_pose = self.desired_pose if not self.desired_pose is None else self.first_ee_pose
             
             desired_out = desired_pose
+            # print("Debug DiffIK - End Effector Position Commanded: pos {}, quat {}".format(desired_pose.translation(), desired_pose.rotation().ToQuaternion().wxyz()))
         
         elif self.control_mode == ControlMode.CARTESIAN_VELOCITY:
             self.desired_cartesian_vel = self.lcm.get_desired_cartesian_vel()
@@ -277,7 +289,7 @@ def diffik_pose_diagram(plant: MultibodyPlant, simulated: bool = False, ee_frame
         iiwa_state.get_input_port(1)
     )
 
-    diffik_block = AddIiwaDifferentialIK(builder, plant, plant.GetFrameByName(ee_frame))       
+    diffik_block = AddIiwaDifferentialIK(builder, plant, plant.GetFrameByName(ee_frame), xyz_speed_limit=1.0, angular_speed_limit=180.0 * np.pi / 180, time_step=plant.time_step())       
     builder.Connect(
         iiwa_state.get_output_port(),
         diffik_block.GetInputPort("robot_state"),
