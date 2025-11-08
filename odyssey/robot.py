@@ -203,7 +203,6 @@ class RobotLoopDiagram:
     def run_system(self, diagram, duration=np.inf, initial_q = np.array([0.0, np.pi/6, 0.0, -80*np.pi/180, 0.0, np.pi/6, 0.0])):
         simulator = Simulator(diagram)
         simulator.set_target_realtime_rate(1.0)
-        simulator.Initialize()
         
         if self.simulated:
             # set joint positions to initial positions
@@ -220,6 +219,7 @@ class RobotLoopDiagram:
             if np.max(np.abs(initial_q - curr_q)) > 1e-3:
                 raise RuntimeError("Initial joint positions for real robot differ from measured positions! measured: {}, initial_q: {}".format(curr_q, initial_q))
         
+        simulator.Initialize() # this will run any initialization events (including discretestate initialization)
         simulator.AdvanceTo(duration)
         
     def get_arm_pose(self, frame_name, joint_positions):
