@@ -80,6 +80,8 @@ RUN micromamba create -y -n isaac python=3.12
 RUN micromamba run -n isaac python3 -m pip install uv
 
 RUN echo "micromamba activate isaac" >> /root/.bashrc
+
+# setup odyssey lcm for lcm-spy (message debugging)
 RUN echo "export CLASSPATH=$CLASSPATH:/usr/share/java/lcm.jar" >> /root/.bashrc
 RUN echo "cd /root/amazon_ws/odyssey/odyssey/msgs && source buildjar.sh && cd ~" >> /root/.bashrc
 
