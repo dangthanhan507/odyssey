@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:drake="http://drake.mit.edu" xmlns:xacro="http://www.ros.org/wiki/xacro" name="gelsight_mini_calibration">
+
+    <joint name="shell_base_fixed" type="fixed">
+        <origin xyz="0.713041081 0 0.0060" rpy="0 0 0"/>
+        <parent link="base"/>
+        <child link="gelsight_shell"/>
+    </joint>
+
+    <link name="base">
+        <visual>
+            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0123078107"/>
+            <geometry>
+                <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0123078107"/>
+            <geometry>
+                <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="gelsight_shell">
+        <visual>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.005"/>
+            <geometry>
+                <mesh filename="./gelsight_mini/gsmini_shell_hollow_transformed.obj"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.005"/>
+            <geometry>
+                <mesh filename="./gelsight_mini/gsmini_shell_hollow_transformed.obj"/>
+            </geometry>
+        </collision>
+    </link>
+
+</robot>

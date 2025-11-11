@@ -1,0 +1,26 @@
+directives:
+  # Add iiwa
+    - add_model:
+        name: iiwa
+        file: package://drake_models/iiwa_description/sdf/iiwa14_no_collision.sdf
+        default_joint_positions:
+            iiwa_joint_1: [0]
+            iiwa_joint_2: [0]
+            iiwa_joint_3: [0]
+            iiwa_joint_4: [0]
+            iiwa_joint_5: [0]
+            iiwa_joint_6: [0]
+            iiwa_joint_7: [0]
+    - add_weld:
+        parent: world
+        child: iiwa::iiwa_link_0
+    # Add finger frames
+    - add_frame:
+        name: kuka_link_ee_frame
+        X_PF:
+          base_frame: iiwa::iiwa_link_7
+          translation: [0.0, 0.0, 0.035]
+
+model_drivers:
+  iiwa: !IiwaDriver
+    control_mode: position_and_torque

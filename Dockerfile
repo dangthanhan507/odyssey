@@ -42,6 +42,7 @@ RUN apt-get install -y --no-install-recommends \
         liblcm-dev \
         pkg-config \
         libhidapi-dev \
+        freeglut3-dev \
     &&\
     rm -rf /var/lib/apt/lists/*
 
