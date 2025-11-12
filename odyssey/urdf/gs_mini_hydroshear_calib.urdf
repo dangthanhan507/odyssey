@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <robot xmlns:drake="http://drake.mit.edu" xmlns:xacro="http://www.ros.org/wiki/xacro" name="gelsight_mini_calibration">
 
-    <joint name="shell_base_fixed" type="fixed">
-        <origin xyz="0.713041081 0 0.0060" rpy="0 0 0"/>
+    <!-- Defines a base link that will serve as the model's root. -->
+    <link name="base"/>
+    <!--joint between {parent} and link_0-->
+    <joint name="base_joint" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="base"/>
-        <child link="gelsight_shell"/>
+        <child link="mount"/>
     </joint>
 
-    <link name="base">
+    <link name="mount">
         <visual>
-            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0123078107"/>
+            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0062778107"/>
             <geometry>
                 <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0123078107"/>
+            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0062778107"/>
             <geometry>
                 <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
             </geometry>
@@ -24,17 +27,47 @@
 
     <link name="gelsight_shell">
         <visual>
-            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.005"/>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
             <geometry>
                 <mesh filename="./gelsight_mini/gsmini_shell_hollow_transformed.obj"/>
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.005"/>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
             <geometry>
                 <mesh filename="./gelsight_mini/gsmini_shell_hollow_transformed.obj"/>
             </geometry>
         </collision>
     </link>
+
+    <joint name="shell_base_fixed" type="fixed">
+        <origin xyz="0.713041081 0 0.0060" rpy="0 0 0"/>
+        <parent link="base"/>
+        <child link="gelsight_shell"/>
+    </joint>
+
+
+    <!-- mounts gelpad -->
+
+    <link name="gelpad">
+        <visual>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
+            <geometry>
+                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed.obj"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
+            <geometry>
+                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed.obj"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="gelpad_shell_fixed" type="fixed">
+        <origin xyz="0 0 0.00" rpy="0 0 0"/>
+        <parent link="gelsight_shell"/>
+        <child link="gelpad"/>
+    </joint>
 
 </robot>

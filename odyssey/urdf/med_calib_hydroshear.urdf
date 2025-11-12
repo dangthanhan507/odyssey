@@ -260,8 +260,47 @@
     <drake:ignored_collision_filter_group name="iiwa_wrist"/>
   </drake:collision_filter_group>
 
-  <!-- Get calibration config -->
-  
+  <!-- Get calibration parts -->
+  <link name="indenter_mount">
+    <visual>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
+      <geometry>
+        <mesh filename="./calib_assets/indenter_mount/indenter_mount.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
+      <geometry>
+        <mesh filename="./calib_assets/indenter_mount/indenter_mount.obj"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="mount_joint" type="fixed">
+    <parent link="iiwa_link_ee_kuka"/>
+    <child link="indenter_mount"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+  </joint>
+
+  <link name="indenter_sphere">
+    <visual>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
+      <geometry>
+        <mesh filename="./calib_assets/24mm_sphere/24mm_sphere.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
+      <geometry>
+        <mesh filename="./calib_assets/24mm_sphere/24mm_sphere.obj"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="mount_joint" type="fixed">
+    <parent link="indenter_mount"/>
+    <child link="indenter_sphere"/>
+    <origin rpy="0 0 0" xyz="0 0 0.012"/>
+  </joint>
 
   <!-- Load Gazebo lib and set the robot namespace -->
   <gazebo>
