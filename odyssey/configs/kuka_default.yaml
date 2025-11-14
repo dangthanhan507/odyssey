@@ -24,3 +24,9 @@ directives:
 model_drivers:
   iiwa: !IiwaDriver
     control_mode: position_and_torque
+
+lcm_buses:
+  iiwa:
+    lcm_url: udpm://239.255.76.67:7667?ttl=0
+  default:
+    lcm_url: udpm://239.255.76.67:7667?ttl=0

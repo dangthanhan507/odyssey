@@ -5,7 +5,9 @@ from pydrake.all import (
     AddMultibodyPlant,
     Parser,
     LeafSystem,
-    PassThrough
+    PassThrough,
+    PiecewisePolynomial,
+    TrajectorySource
 )
 from manipulation.station import (
     Scenario,
@@ -13,7 +15,7 @@ from manipulation.station import (
     ProcessModelDirectives,
     ModelDirectives,
     load_scenario, 
-    MakeHardwareStation
+    MakeHardwareStation,
 )
 import typing
 import numpy as np
@@ -213,11 +215,11 @@ class RobotLoopDiagram:
         
         else:
             simulator_context = simulator.get_mutable_context()
-            station_context = self._station.GetMyMtuableContextFromRoot(simulator_context)
+            station_context = self._station.GetMyMutableContextFromRoot(simulator_context)
             self._station.ExecuteInitializationEvents(station_context)
             curr_q = self._station.GetOutputPort("iiwa.position_measured").Eval(station_context)
-            if np.max(np.abs(initial_q - curr_q)) > 1e-3:
-                raise RuntimeError("Initial joint positions for real robot differ from measured positions! measured: {}, initial_q: {}".format(curr_q, initial_q))
+            # if np.max(np.abs(initial_q - curr_q)) > 1e-3:
+            #     raise RuntimeError("Initial joint positions for real robot differ from measured positions! measured: {}, initial_q: {}".format(curr_q, initial_q))
         
         simulator.Initialize() # this will run any initialization events (including discretestate initialization)
         simulator.AdvanceTo(duration)
@@ -230,9 +232,37 @@ class RobotLoopDiagram:
         pos = X_WF.translation()
         quat = X_WF.rotation().ToQuaternion().wxyz()
         return quat, pos
-        
+
+def follow_traj(config, des_q, joint_speed = 5.0 * np.pi / 180, least_time = 5.0, extra_time=2.0):
+    scenario = load_scenario(filename=config)
+    hardware_diagram = MakeHardwareStation(scenario, hardware=True)
+    
+    context = hardware_diagram.CreateDefaultContext()
+    hardware_diagram.ExecuteInitializationEvents(context)
+    curr_q = hardware_diagram.GetOutputPort("iiwa.position_commanded").Eval(context)
+    
+    total_joint_displacement = np.max(np.abs(des_q - curr_q))
+    endtime = np.maximum(total_joint_displacement / joint_speed, least_time)
+    time_array = np.array([0.0, endtime])
+    joint_array = np.array([curr_q, des_q])
+    q_traj = PiecewisePolynomial.FirstOrderHold(time_array, joint_array.T)
+
+    root_builder = DiagramBuilder()
+    hardware_block = root_builder.AddSystem(hardware_diagram)
+    traj_block = root_builder.AddSystem(TrajectorySource(q_traj))
+    root_builder.Connect(traj_block.get_output_port(), hardware_block.GetInputPort("iiwa.position"))
+    root_diagram = root_builder.Build()
+    
+    input(f"Press Enter to start moving the robot for {endtime:.2f} seconds...")
+    simulator = Simulator(root_diagram)
+    simulator.set_target_realtime_rate(1.0)
+    simulator.AdvanceTo(endtime + extra_time)
+
 if __name__ == '__main__':
     config = "configs/kuka_default.yaml"
-    loop_diagram = RobotLoopDiagram(config, use_simulated_hardware=True, use_impedance=True)
+    loop_diagram = RobotLoopDiagram(config, use_simulated_hardware=False, use_impedance=True)
     diagram = loop_diagram.setup_diagram()
     loop_diagram.run_system(diagram)
+    
+    # HOME_Q = np.array([0.0, 75.0, 0.0, -56.0, 0.0, 49.0, 0.0]) * np.pi / 180
+    # follow_traj(config, HOME_Q)
