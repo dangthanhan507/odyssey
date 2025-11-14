@@ -13,9 +13,9 @@ LABEL Author An
 
 WORKDIR /root/amazon_ws/
 
-RUN apt-get upgrade && apt-get update
+RUN 
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get upgrade && apt-get update && apt-get install -y --no-install-recommends \
         git \
         vim \
         nano \
@@ -43,9 +43,20 @@ RUN apt-get install -y --no-install-recommends \
         pkg-config \
         libhidapi-dev \
         freeglut3-dev \
+        gnupg \
+        libgflags-dev \
+        patch \
     &&\
     rm -rf /var/lib/apt/lists/*
 
+
+# install bazel
+RUN curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg \
+    && mv bazel-archive-keyring.gpg /usr/share/keyrings \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list \
+    && apt-get upgrade && apt-get update \
+    && apt-get install -y --no-install-recommends bazel \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG MAMBA_USER=user
 ARG MAMBA_USER_ID=57439
