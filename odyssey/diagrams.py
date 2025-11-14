@@ -13,6 +13,7 @@ from pydrake.all import (
 )
 import numpy as np
 from odyssey.msgs.lcm_msgs import lcmt_iiwa_status
+from drake import lcmt_iiwa_status
 from odyssey.robot_lcm import KukaLoopLCM
 from enum import Enum
 from odyssey.utils import AddIiwaDifferentialIK, VelocityDiffIK
@@ -29,7 +30,7 @@ class ControlMode(Enum):
 class ExternalSystem(LeafSystem):
     def __init__(self, 
                  plant: MultibodyPlant,
-                 ee_frame = "iiwa_link_7",
+                ee_frame = "iiwa_link_7",
                  simulated: bool = False,
                  control_mode: ControlMode = ControlMode.JOINT,
                  max_joint_speed = 30.0 * np.pi / 180.0,
@@ -48,6 +49,8 @@ class ExternalSystem(LeafSystem):
         self.desired_pos = None
         self.feedforward_torque = None
         self.first_ee_pose = None
+        
+        self.prev_V_WE = np.zeros(6)
         
         self.lcm = KukaLoopLCM()
         

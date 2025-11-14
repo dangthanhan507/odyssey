@@ -4,7 +4,7 @@ from odyssey.msgs.lcm_msgs import iiwa_commands_t
 
 class KukaLoopLCM:
     def __init__(self):
-        self.lcm = lcm.LCM()
+        self.lcm = lcm.LCM(provider="udpm://239.241.129.92:20185?ttl=0")
         self.sub = self.lcm.subscribe('ODYSSEY_IIWA_TARGETS', lambda channel, data: self.msg_handler(channel, data))
         self.sub.set_queue_capacity(1)
         self.desired_quat = None

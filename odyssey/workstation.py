@@ -10,7 +10,7 @@ import lcm
 # we can use this outside of drake simulation to prevent overhead in control loop
 class KukaLCM:
     def __init__(self):
-        self.lcm = lcm.LCM()
+        self.lcm = lcm.LCM(provider="udpm://239.241.129.92:20185?ttl=0")
         self.sub = self.lcm.subscribe('IIWA_STATUS', lambda channel, data: self.msg_handler(channel, data))
         self.sub.set_queue_capacity(1)
 
@@ -134,8 +134,8 @@ class OdysseyBaseWorkstation:
     def update_robot_joints(self, joint_positions):
         self.viser_urdf.update_cfg(np.array(joint_positions))
 
-    def handle(self):
-        self.kuka_lcm.handle(ms=10)
+    def handle(self, ms = 10):
+        self.kuka_lcm.handle(ms=ms)
         joint_position = self.kuka_lcm.get_joint_position_measured()
         if joint_position is not None:
             self.update_robot_joints(joint_position)
