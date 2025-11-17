@@ -46,6 +46,9 @@ RUN apt-get upgrade && apt-get update && apt-get install -y --no-install-recomme
         gnupg \
         libgflags-dev \
         patch \
+        libopenjp2-7 \
+        libopenexr-dev \
+        v4l-utils \
     &&\
     rm -rf /var/lib/apt/lists/*
 

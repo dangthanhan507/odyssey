@@ -12,6 +12,7 @@ services:
     volumes:
       - ~/amazon_ws:/root/amazon_ws
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/v4l:/dev/v4l
     environment:
       # specify the display drivers
       - DISPLAY=$DISPLAY
