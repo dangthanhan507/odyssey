@@ -12,13 +12,14 @@
 
     <link name="mount">
         <visual>
-            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0062778107"/>
+            <!-- <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0062778107"/> -->
+            <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0073078"/>
             <geometry>
                 <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="0.713041081 0 -0.0062778107"/>
+            <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0073078"/>
             <geometry>
                 <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
             </geometry>
@@ -41,8 +42,8 @@
     </link>
 
     <joint name="shell_base_fixed" type="fixed">
-        <origin xyz="0.713041081 0 0.0060" rpy="0 0 0"/>
-        <parent link="base"/>
+        <origin xyz="0.713041081 0 0.0060" rpy="0 0 1.57079633"/>
+        <parent link="mount"/>
         <child link="gelsight_shell"/>
     </joint>
 

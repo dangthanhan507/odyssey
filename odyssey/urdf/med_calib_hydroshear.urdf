@@ -69,7 +69,7 @@
   <joint name="iiwa_joint_1" type="revolute">
     <parent link="iiwa_link_0"/>
     <child link="iiwa_link_1"/>
-    <origin rpy="0 0 0" xyz="0 0 0.1575"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.147" />
     <axis xyz="0 0 1"/>
     <limit drake:acceleration="8.57" effort="200" lower="-2.9670597283903604" upper="2.9670597283903604" velocity="1.4835298641951802"/>
     <dynamics damping="0.5"/>
@@ -285,13 +285,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
-        <mesh filename="./calib_assets/24mm_sphere/24mm_sphere.obj"/>
+        <mesh filename="./calib_assets/35mm_sphere/35mm_sphere.obj"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
-        <mesh filename="./calib_assets/24mm_sphere/24mm_sphere.obj"/>
+        <mesh filename="./calib_assets/35mm_sphere/35mm_sphere.obj"/>
       </geometry>
     </collision>
   </link>
