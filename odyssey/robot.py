@@ -260,9 +260,9 @@ def follow_traj(config, des_q, joint_speed = 5.0 * np.pi / 180, least_time = 5.0
 
 if __name__ == '__main__':
     config = "configs/kuka_default.yaml"
-    loop_diagram = RobotLoopDiagram(config, use_simulated_hardware=False, use_impedance=True)
-    diagram = loop_diagram.setup_diagram()
-    loop_diagram.run_system(diagram)
+    # loop_diagram = RobotLoopDiagram(config, use_simulated_hardware=False, use_impedance=True)
+    # diagram = loop_diagram.setup_diagram()
+    # loop_diagram.run_system(diagram)
     
-    # HOME_Q = np.array([0.0, 75.0, 0.0, -56.0, 0.0, 49.0, 0.0]) * np.pi / 180
-    # follow_traj(config, HOME_Q)
+    HOME_Q = np.array([0.0, 75.0, 0.0, -56.0, 0.0, 49.0, 0.0]) * np.pi / 180
+    follow_traj(config, HOME_Q)
