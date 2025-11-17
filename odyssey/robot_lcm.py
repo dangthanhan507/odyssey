@@ -37,5 +37,5 @@ class KukaLoopLCM:
     def get_desired_joints(self):
         return self.desired_joints
     
-    def handle(self):
-        self.lcm.handle_timeout(10)
+    def handle(self, ms=0):
+        self.lcm.handle_timeout(ms)

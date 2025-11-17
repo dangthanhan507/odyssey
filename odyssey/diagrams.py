@@ -367,7 +367,9 @@ def cartesian_velocity_diagram(plant: MultibodyPlant, ee_frame='iiwa_link_7', si
         VelocityDiffIK(
             plant,
             frame_name=ee_frame,
-            vel_limit=vel_limit
+            vel_limit=vel_limit,
+            # time_step=1e-2
+            time_step = 1e-4
         )
     )
     builder.Connect(

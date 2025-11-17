@@ -38,7 +38,7 @@ class SpacemouseTeleopWorkstation(OdysseyBaseWorkstation):
         # self.prev_V_WE = np.zeros((6,))
     
     def handle(self):
-        OdysseyBaseWorkstation.handle(self, ms=10)
+        OdysseyBaseWorkstation.handle(self, ms=0)
         state = pyspacemouse.read()
         command_xyz = StickDeadzone(state.x, state.y, state.z)
         command_rpy = StickDeadzone(state.roll, state.pitch, state.yaw)
@@ -58,22 +58,19 @@ class SpacemouseTeleopWorkstation(OdysseyBaseWorkstation):
         
         # smoothing factor of exponential moving average
         # st = alpha * xt + (1-alpha) * st-1
-        alpha = 0.3
-        V_WE_desired = V_WE_desired * alpha + (1 - alpha) * self.prev_V_WE if np.max(np.abs(V_WE_desired)) > 1e-4 else np.zeros((6,))
-        self.prev_V_WE = V_WE_desired
+        # alpha = 0.3
+        # V_WE_desired = V_WE_desired * alpha + (1 - alpha) * self.prev_V_WE if np.max(np.abs(V_WE_desired)) > 1e-4 else np.zeros((6,))
+        # self.prev_V_WE = V_WE_desired
 
-        self.history_V_WE[:-1, :] = self.history_V_WE[1:, :]
-        self.history_V_WE[-1, :] = V_WE_desired
-        V_WE_desired = np.mean(self.history_V_WE, axis=0)
+        # self.history_V_WE[:-1, :] = self.history_V_WE[1:, :]
+        # self.history_V_WE[-1, :] = V_WE_desired
+        # V_WE_desired = np.mean(self.history_V_WE, axis=0)
         
         self.send_cartesian_velocity_command(
             V_WE=V_WE_desired,
         )
-        self.send_cartesian_velocity_command(
-            V_WE=np.zeros(6),
-        )
         
-        time.sleep(1.0 / 80.0)
+        # time.sleep(1.0 / 1000.0)
 
 if __name__ == '__main__':
     # run robot.py
