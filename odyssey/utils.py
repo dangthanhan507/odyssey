@@ -7,6 +7,7 @@ from pydrake.all import (
     MultibodyPlant,
 )
 import numpy as np
+import time
 
 def AddIiwaDifferentialIK(builder, plant, frame=None, xyz_speed_limit = 0.03, angular_speed_limit = 20 * np.pi / 180, time_step=1e-4):
     params = DifferentialInverseKinematicsParameters(
@@ -60,7 +61,7 @@ def DiffIKParams(plant, xyz_speed_limit = 0.03, time_step=1e-4):
     return params
 
 class VelocityDiffIK(LeafSystem):
-    def __init__(self, plant: MultibodyPlant, frame_name = "iiwa_link_7", vel_limit = 0.03):
+    def __init__(self, plant: MultibodyPlant, frame_name = "iiwa_link_7", vel_limit = 0.03, time_step = 1e-3):
         LeafSystem.__init__(self)
         
         self._plant = plant
@@ -73,7 +74,7 @@ class VelocityDiffIK(LeafSystem):
         self.DeclareVectorInputPort("V_WE", 6)
         self.DeclareInitializationDiscreteUpdateEvent(self.Initialize)
         
-        self._time_step = plant.time_step()
+        self._time_step = time_step
         self.DeclareDiscreteState(plant.num_positions()) # one discrete state for tracking target joint positions
         self.DeclarePeriodicDiscreteUpdateEvent(self._time_step, 0, self.CalcJointPos)
         
@@ -101,6 +102,16 @@ class VelocityDiffIK(LeafSystem):
         )    
         q_next = q + result.joint_velocities * self._time_step if result.status == DifferentialInverseKinematicsStatus.kSolutionFound else q
         discrete_state.set_value(0, q_next)
+        
+        self.time = time.time()
+        if hasattr(self, "prev_time"):
+            dt = self.time - self.prev_time
+            # print("Diff IK dt:", dt)
+            # print("\t timestep:", self._time_step)
+        self.prev_time = self.time
+        
+        # np.set_printoptions(precision=4, suppress=True)
+        # print(V_WE)
         
     def OutputIiwaPosition(self, context, output):
         q_next = context.get_discrete_state(0).get_value()
