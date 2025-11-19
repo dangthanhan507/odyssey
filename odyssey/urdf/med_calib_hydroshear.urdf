@@ -275,7 +275,7 @@
       </geometry>
     </collision>
   </link>
-  <joint name="mount_joint" type="fixed">
+  <joint name="ee_mount_joint" type="fixed">
     <parent link="iiwa_link_ee_kuka"/>
     <child link="indenter_mount"/>
     <origin rpy="0 0 0" xyz="0 0 0.0"/>
@@ -296,10 +296,10 @@
     </collision>
   </link>
 
-  <joint name="mount_joint" type="fixed">
+  <joint name="mount_sphere_joint" type="fixed">
     <parent link="indenter_mount"/>
     <child link="indenter_sphere"/>
-    <origin rpy="0 0 0" xyz="0 0 0.012"/>
+    <origin rpy="0 0 0" xyz="0 0 0.01969"/>
   </joint>
 
   <!-- Load Gazebo lib and set the robot namespace -->
