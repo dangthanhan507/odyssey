@@ -13,13 +13,13 @@
     <link name="mount">
         <visual>
             <!-- <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0062778107"/> -->
-            <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0073078"/>
+            <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0143078"/>
             <geometry>
                 <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0073078"/>
+            <origin rpy="0 0 1.57079633" xyz="0.713041081 0 -0.0143078"/>
             <geometry>
                 <mesh filename="./calib_assets/gelsight_mount/gelsight_mount.obj"/>
             </geometry>
@@ -28,13 +28,13 @@
 
     <link name="gelsight_shell">
         <visual>
-            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.00273"/>
             <geometry>
                 <mesh filename="./gelsight_mini/gsmini_shell_hollow_transformed.obj"/>
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.00273"/>
             <geometry>
                 <mesh filename="./gelsight_mini/gsmini_shell_hollow_transformed.obj"/>
             </geometry>
@@ -52,15 +52,15 @@
 
     <link name="gelpad">
         <visual>
-            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0589995 0.00243"/>
             <geometry>
-                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed.obj"/>
+                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed_enclosed.obj"/>
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 3.14159265 0" xyz="0 0.0599995 0.01103"/>
+            <origin rpy="0 3.14159265 0" xyz="0 0.0589995 0.00243"/>
             <geometry>
-                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed.obj"/>
+                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed_enclosed.obj"/>
             </geometry>
         </collision>
     </link>

@@ -299,7 +299,7 @@
   <joint name="mount_sphere_joint" type="fixed">
     <parent link="indenter_mount"/>
     <child link="indenter_sphere"/>
-    <origin rpy="0 0 0" xyz="0 0 0.01969"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0196969"/>
   </joint>
 
   <!-- Load Gazebo lib and set the robot namespace -->
