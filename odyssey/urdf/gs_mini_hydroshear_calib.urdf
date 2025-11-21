@@ -54,7 +54,7 @@
         <visual>
             <origin rpy="0 3.14159265 0" xyz="0 0.0589995 0.00243"/>
             <geometry>
-                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed_enclosed.obj"/>
+                <mesh filename="./gelsight_mini/gsmini_elastomer_transformed.obj"/>
             </geometry>
         </visual>
         <collision>
