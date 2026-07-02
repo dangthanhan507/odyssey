@@ -16,7 +16,57 @@ The fabric repulsion term shaves off the sphere radius from the signed distance
 and builds a rank-1 metric along ``direction``; see ``fabric_terms.py``.
 """
 
+import json
+
 import numpy as np
+
+
+def _wxyz_to_matrix(wxyz):
+    """Convert a (w, x, y, z) quaternion to a 3x3 rotation matrix."""
+    w, x, y, z = np.asarray(wxyz, dtype=float)
+    n = np.sqrt(w * w + x * x + y * y + z * z)
+    if n < 1e-12:
+        return np.eye(3)
+    w, x, y, z = w / n, x / n, y / n, z / n
+    return np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+    ])
+
+
+def _matrix_to_wxyz(R):
+    """Convert a 3x3 rotation matrix to a (w, x, y, z) quaternion."""
+    R = np.asarray(R, dtype=float)
+    trace = np.trace(R)
+    if trace > 0.0:
+        s = 0.5 / np.sqrt(trace + 1.0)
+        w = 0.25 / s
+        x = (R[2, 1] - R[1, 2]) * s
+        y = (R[0, 2] - R[2, 0]) * s
+        z = (R[1, 0] - R[0, 1]) * s
+    else:
+        i = int(np.argmax([R[0, 0], R[1, 1], R[2, 2]]))
+        if i == 0:
+            s = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
+            w = (R[2, 1] - R[1, 2]) / s
+            x = 0.25 * s
+            y = (R[0, 1] + R[1, 0]) / s
+            z = (R[0, 2] + R[2, 0]) / s
+        elif i == 1:
+            s = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
+            w = (R[0, 2] - R[2, 0]) / s
+            x = (R[0, 1] + R[1, 0]) / s
+            y = 0.25 * s
+            z = (R[1, 2] + R[2, 1]) / s
+        else:
+            s = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
+            w = (R[1, 0] - R[0, 1]) / s
+            x = (R[0, 2] + R[2, 0]) / s
+            y = (R[1, 2] + R[2, 1]) / s
+            z = 0.25 * s
+    q = np.array([w, x, y, z])
+    return q / np.linalg.norm(q)
 
 
 class BoxObstacle:
@@ -44,6 +94,33 @@ class BoxObstacle:
     @property
     def size(self):
         return 2.0 * self.half_extents
+
+    @property
+    def wxyz(self):
+        """Orientation as a (w, x, y, z) quaternion (viser's convention)."""
+        return _matrix_to_wxyz(self.rotation)
+
+    @classmethod
+    def from_pose(cls, center, size, wxyz=None, name=""):
+        """Build from a center, size, and (w, x, y, z) quaternion."""
+        rotation = None if wxyz is None else _wxyz_to_matrix(wxyz)
+        return cls(center=center, size=size, rotation=rotation, name=name)
+
+    def to_dict(self):
+        """Serialize to a plain dict (JSON-friendly), pose as quaternion."""
+        return {
+            "name": self.name,
+            "center": self.center.tolist(),
+            "size": self.size.tolist(),
+            "wxyz": self.wxyz.tolist(),
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        """Inverse of ``to_dict``. Rotation may be given as ``wxyz`` or omitted."""
+        return cls.from_pose(
+            center=d["center"], size=d["size"],
+            wxyz=d.get("wxyz"), name=d.get("name", ""))
 
     def _to_local(self, points):
         """Transform world points into the box frame. Accepts (3,) or (N, 3)."""
@@ -128,11 +205,37 @@ class ObstacleSet:
         self.obstacles.append(obstacle)
         return obstacle
 
-    def add_box(self, center, size, rotation=None, name=""):
+    def add_box(self, center, size, rotation=None, name="", wxyz=None):
+        if wxyz is not None:
+            return self.add(BoxObstacle.from_pose(center, size, wxyz=wxyz, name=name))
         return self.add(BoxObstacle(center, size, rotation=rotation, name=name))
+
+    def remove(self, obstacle):
+        self.obstacles.remove(obstacle)
 
     def __len__(self):
         return len(self.obstacles)
+
+    # -- serialization ------------------------------------------------------
+    def to_dict(self):
+        """Serialize the whole set to a JSON-friendly dict."""
+        return {"version": 1, "frame": "world",
+                "boxes": [o.to_dict() for o in self.obstacles]}
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls([BoxObstacle.from_dict(b) for b in d.get("boxes", [])])
+
+    def save_json(self, path):
+        """Write the obstacle set to ``path`` as JSON."""
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load_json(cls, path):
+        """Load an obstacle set previously written by ``save_json``."""
+        with open(path, "r") as f:
+            return cls.from_dict(json.load(f))
 
     def query(self, points):
         """Closest-obstacle signed distance and direction for each query point.

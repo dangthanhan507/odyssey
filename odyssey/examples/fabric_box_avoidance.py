@@ -70,6 +70,7 @@ def _setup_viser(workstation, obstacles, sphere_radii):
             color=(200, 60, 60),
             dimensions=tuple(obs.size),
             position=tuple(obs.center),
+            wxyz=tuple(obs.wxyz),
             opacity=0.5,
         )
     sphere_handles = []
@@ -91,11 +92,18 @@ def main():
     parser.add_argument("--total_time", type=float, default=60.0)
     parser.add_argument("--no_spheres", action="store_true",
                         help="Do not render collision spheres in viser.")
+    parser.add_argument("--constraints", default=None,
+                        help="Path to a constraints JSON (from constraint_editor) "
+                             "to load instead of the built-in boxes.")
     args = parser.parse_args()
 
     dt = 1.0 / args.control_rate
 
-    obstacles = build_obstacles()
+    if args.constraints:
+        obstacles = ObstacleSet.load_json(args.constraints)
+        print(f"Loaded {len(obstacles)} constraint boxes from {args.constraints}")
+    else:
+        obstacles = build_obstacles()
     fabric = IiwaBoxFabric(obstacles, use_posture_attractor=True)
     fabric.set_posture_target(HOME_Q)
 

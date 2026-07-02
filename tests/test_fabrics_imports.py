@@ -14,6 +14,7 @@ FABRICS_MODULES = [
     "odyssey.fabrics.fabric_terms",
     "odyssey.fabrics.fabric",
     "odyssey.examples.fabric_box_avoidance",
+    "odyssey.examples.constraint_editor",
 ]
 
 

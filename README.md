@@ -125,6 +125,45 @@ python -m odyssey.examples.fabric_box_avoidance            # viser + LCM
 python -m odyssey.examples.fabric_box_avoidance --headless # no viser, no LCM
 ```
 
+### Editing workspace constraints in viser
+
+Use the interactive editor to place constraint boxes around the robot with
+transform gizmos (drag to translate/rotate, number fields to resize), then
+export them to JSON:
+
+```bash
+python -m odyssey.examples.constraint_editor --output my_constraints.json
+python -m odyssey.examples.constraint_editor --load my_constraints.json   # re-edit
+```
+
+Open the viser URL, add/move/resize/delete boxes, and click **save JSON**. The
+boxes are defined in the robot's world frame, so the same file is valid in
+simulation and on the real hardware. Feed it back into the fabric:
+
+```bash
+python -m odyssey.examples.fabric_box_avoidance --constraints my_constraints.json
+```
+
+Or load it directly in code for a hardware control loop:
+
+```python
+from odyssey.fabrics import ObstacleSet, IiwaBoxFabric
+obstacles = ObstacleSet.load_json("my_constraints.json")
+fabric = IiwaBoxFabric(obstacles)
+# ... fabric.step(q, qd, dt) each control step, send q over LCM ...
+```
+
+The JSON format is a list of boxes with `center`, `size` (full extents), and a
+`wxyz` orientation quaternion:
+
+```json
+{
+  "version": 1, "frame": "world",
+  "boxes": [{"name": "front_wall", "center": [0.55, 0.3, 0.6],
+             "size": [0.3, 0.2, 0.5], "wxyz": [1.0, 0.0, 0.0, 0.0]}]
+}
+```
+
 ## Running code
 
 ## Docker
