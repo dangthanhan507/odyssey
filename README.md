@@ -10,6 +10,35 @@ This library should be my one-stop shop for running code on the kuka hardware.
 
 Checkout examples for ways to use the odyssey library in simulation and on hardware.
 
+### Running the examples
+
+All examples live in `odyssey/examples/` and are run **from the repo package
+directory** so their relative paths (`configs/...`, `urdf/...`) resolve:
+
+```bash
+cd odyssey            # i.e. /path/to/odyssey/odyssey (the package dir)
+uv run python examples/spacemouse_teleop.py
+```
+
+Each teleop example follows the same two-process pattern: the `__main__` block
+spawns the `RobotLoopDiagram` (the robot loop / LCM server) in a background
+`multiprocessing.Process`, then constructs a workstation (the LCM client) and
+loops `workstation.handle()`. Ctrl-C exits and cleans up the robot process.
+
+| Example | Device | Control mode | Notes |
+|---|---|---|---|
+| `joint_sliders.py` | viser GUI sliders | JOINT | simulated by default |
+| `cartesian_drag.py` | viser transform gizmo | DIFFIK_POSE | simulated by default |
+| `spacemouse_teleop.py` | 3Dconnexion SpaceMouse | CARTESIAN_VELOCITY | needs a SpaceMouse |
+| `oculus_teleop.py` | Oculus/Quest controller | DIFFIK_POSE | needs `oculus_reader` + Quest (see below) |
+| `gamepad_teleop.py` | gamepad + Schunk WSG gripper | CARTESIAN_VELOCITY | needs a gamepad + schunk driver (see below) |
+
+Device-specific teleop examples (spacemouse / oculus / gamepad) import their
+device library lazily, so the modules import and their mapping math can be
+validated even when the hardware is absent. Each has a matching hardware-free
+`check_*.py` script that validates the math with `uv run python
+examples/check_<name>_teleop.py`.
+
 First we want to run our `RobotLoopDiagram` which will create the robot system and controller. Note this will be ran separately from the workstation code. You can look at examples for details on how to run both in one script.
 
 ```python
@@ -119,4 +148,68 @@ sudo apt-get install libhidapi-dev
 sudo echo 'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0664", GROUP="plugdev"' > /etc/udev/rules.d/99-hidraw-permissions.rules
 sudo usermod -aG plugdev $USER
 newgrp plugdev
+```
+
+## Oculus (Quest) teleop
+
+`examples/oculus_teleop.py` teleops the end-effector with an Oculus/Quest
+controller (DIFFIK_POSE control mode). Hold the right controller's grip button
+to enable motion; the relative controller motion is applied to the arm's pose
+and re-anchors on release. This robot has no gripper, so the right trigger is
+read but unused.
+
+This example needs the `oculus_reader` package, which is **not** a declared
+dependency because it requires a physical Quest headset connected over ADB. The
+import is lazy, so the rest of the module (and the pose math) works without it.
+Install it separately when running on real hardware:
+
+```bash
+pip install git+https://github.com/rail-berkeley/oculus_reader.git
+# also requires adb (android-tools-adb) and a connected Quest
+```
+
+You can validate the teleop pose math without any hardware or robot process:
+
+```bash
+uv run python odyssey/examples/check_oculus_teleop.py
+```
+
+## Gamepad teleop (with Schunk WSG gripper)
+
+`examples/gamepad_teleop.py` teleops the end-effector with a gamepad
+(CARTESIAN_VELOCITY control mode) and drives a Schunk WSG gripper with the right
+trigger:
+
+- **left stick** → end-effector translation in x / y
+- **right stick** → z translation (vertical) and a rotation term (horizontal)
+- **right trigger** → proportional gripper: released = open, fully squeezed =
+  closed, partial = partway. The trigger value maps linearly between
+  `gripper_open_mm` and `gripper_closed_mm`.
+
+`pygame` (used to read the gamepad) is a declared dependency, but a physical
+gamepad must be connected at runtime. The `pygame` import is lazy, so the module
+and its mapping helpers work without a joystick present.
+
+**Gripper wiring.** The gripper is commanded over LCM using Drake's
+`lcmt_schunk_wsg_command` on channel `SCHUNK_WSG_COMMAND`, published on odyssey's
+LCM bus (`udpm://239.241.129.92:20185`, the same bus as the iiwa). The separate
+[`drake-schunk-driver`](../drake-schunk-driver) daemon must be running and
+listening on that same bus/channel to actually move the gripper — run it with
+odyssey's LCM URL (e.g. export `LCM_DEFAULT_URL=udpm://239.241.129.92:20185`)
+so both ends share a bus. Axis indices in `GamepadTeleopWorkstation.AXIS_*`
+target an Xbox-style layout via pygame; remap them for your controller.
+
+Run it (arm on real hardware; set `use_simulated_hardware=True` in the
+`__main__` block to run the arm in sim):
+
+```bash
+cd odyssey
+uv run python examples/gamepad_teleop.py
+```
+
+Validate the stick→velocity and trigger→gripper mapping math without a gamepad,
+robot, or gripper:
+
+```bash
+uv run python odyssey/examples/check_gamepad_teleop.py
 ```

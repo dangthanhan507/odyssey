@@ -9,6 +9,7 @@ dependencies = [
     "ipdb>=0.13.13",
     "lcm>=1.5.2",
     "manipulation>=2025.10.20",
+    "pygame>=2.6.1",
     "pyspacemouse>=1.1.4",
     "robot-descriptions>=1.21.0",
     "viser>=1.0.15",
@@ -22,3 +23,8 @@ build-backend = "setuptools.build_meta" # Or your chosen build backend
 
 [tool.setuptools]
 packages = ["odyssey"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
