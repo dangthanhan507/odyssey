@@ -83,6 +83,48 @@ For `OdysseyBaseWorkstation`, we use different commands for different control mo
 - CARTESIAN_VELOCITY: `send_cartesian_velocity_command`
 
 
+## Geometric fabrics collision avoidance
+
+`odyssey.fabrics` is a CPU/numpy port of the geometric-fabric collision
+avoidance in NVIDIA's [FABRICS](https://github.com/NVlabs/FABRICS)
+(`fabrics_sim`). The upstream library is GPU/Warp-only and wired for the
+Kuka-Allegro; here the fabric *math* is reimplemented for the iiwa using Drake
+for forward kinematics / Jacobians and analytic box SDFs for obstacles. No
+torch, warp, or Isaac Sim required.
+
+Each control step it integrates `M(q, q̇) q̈ + f(q, q̇) = 0` forward, combining:
+- an **end-effector attractor** (forcing) pulling the arm toward a target,
+- **body-sphere repulsion** (forcing + geometric) pushing the arm's collision
+  spheres away from boxes via a rank-1, `1/d²`-scaled barrier metric,
+- **joint-limit repulsion** and cspace damping.
+
+Behavior is tuned via `configs/fabric_params.yaml` (mirrors the upstream
+`kuka_allegro_pose_params.yaml`).
+
+```python
+import numpy as np
+from odyssey.fabrics import IiwaBoxFabric, ObstacleSet
+
+obstacles = ObstacleSet()
+obstacles.add_box(center=[0.55, 0.30, 0.60], size=[0.30, 0.20, 0.50])
+
+fabric = IiwaBoxFabric(obstacles, use_posture_attractor=True)
+fabric.set_posture_target(np.zeros(7))
+fabric.set_ee_target([0.55, 0.0, 0.35])
+
+q, qd = np.array([0.0, 0.4, 0.0, -1.0, 0.0, 0.6, 0.0]), np.zeros(7)
+for _ in range(600):
+    q, qd, qdd = fabric.step(q, qd, 1.0 / 60.0)
+```
+
+Run the "kuka surrounded by boxes" example (viser + LCM, cycles through targets
+while avoiding the boxes):
+
+```bash
+python -m odyssey.examples.fabric_box_avoidance            # viser + LCM
+python -m odyssey.examples.fabric_box_avoidance --headless # no viser, no LCM
+```
+
 ## Running code
 
 ## Docker

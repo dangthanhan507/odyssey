@@ -22,3 +22,8 @@ build-backend = "setuptools.build_meta" # Or your chosen build backend
 
 [tool.setuptools]
 packages = ["odyssey"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

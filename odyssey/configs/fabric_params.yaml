@@ -1,0 +1,55 @@
+# Fabric parameters for the iiwa box-avoidance example.
+#
+# Ported/adapted from NVIDIA fabrics_sim's kuka_allegro_pose_params.yaml. Only
+# the terms relevant to odyssey are kept: an end-effector attractor, joint-limit
+# repulsion, and body-sphere box repulsion, plus cspace damping / base mass.
+fabric_params:
+  # Small isotropic cspace mass added at the root so the total metric is always
+  # full rank / invertible (the ee attractor and repulsion metrics are
+  # rank-deficient on their own). Analogue of the geometric cspace attractor's
+  # min_isotropic_mass in fabrics_sim.
+  base_mass: 1.0
+
+  # Optional geometric pull toward a rest posture (nullspace resolution).
+  cspace_attractor:
+    conical_gain: 5.0
+    conical_sharpness: 20.0
+
+  # End-effector attractor (forcing policy). Mirrors palm_attractor.
+  ee_attractor:
+    isotropic_mass: 5.0
+    conical_gain: 40.0
+    conical_sharpness: 20.0
+    damping: 20.0
+    damping_sharpness: 10.0
+    damping_radius: 0.2
+
+  # Joint-limit repulsion (forcing policy).
+  joint_limit_repulsion:
+    velocity_gate: true
+    breakaway_distance: 0.0
+    breakaway_velocity: 0.0
+    soft_relu_gain: 8.0
+    metric_scalar: 0.02
+    metric_exploder_offset: 0.1
+    max_metric: 100.0
+    damping_gain: 8.0
+
+  # Body-sphere box repulsion. Same knobs as fabrics_sim's body_repulsion.
+  body_repulsion:
+    max_depth: 2.0
+    min_depth: 0.01
+    engage_depth: 0.5
+    metric_scalar: 1.0
+    velocity_gate: true
+    velocity_gate_sharpness: 1000.0
+    velocity_gate_offset: 0.002
+    rescaled_min_dist: 0.01
+    forcing_metric_scalar: 0.01
+    geom_metric_scalar: 0.01
+    constant_accel: 1.0
+    constant_accel_geom: 5.0
+    damping_gain: 0.0
+
+  cspace_damping:
+    gain: 10.0
